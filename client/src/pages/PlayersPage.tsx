@@ -1,20 +1,20 @@
-import { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Select, SelectItem } from '../components/ui/Select';
-import { PlayerRow } from '../components/players/PlayerRow';
-import { PlayerModal } from '../components/players/PlayerModal';
-import { usePlayers } from '../api/players';
-import { useGroups } from '../api/groups';
-import { useDebounce } from '../hooks/useDebounce';
-import { POSITIONS } from '../lib/positions';
-import type { Player } from '../types';
+import { useState } from "react";
+import { Plus, Search } from "lucide-react";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { Select, SelectItem } from "../components/ui/Select";
+import { PlayerRow } from "../components/players/PlayerRow";
+import { PlayerModal } from "../components/players/PlayerModal";
+import { usePlayers } from "../api/players";
+import { useGroups } from "../api/groups";
+import { useDebounce } from "../hooks/useDebounce";
+import { POSITIONS } from "../lib/positions";
+import type { Player } from "../types";
 
 export function PlayersPage() {
-  const [search, setSearch] = useState('');
-  const [positionFilter, setPositionFilter] = useState('');
-  const [groupFilter, setGroupFilter] = useState('');
+  const [search, setSearch] = useState("");
+  const [positionFilter, setPositionFilter] = useState("");
+  const [groupFilter, setGroupFilter] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | undefined>();
 
@@ -42,7 +42,9 @@ export function PlayersPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Players</h1>
-          <p className="text-sm text-muted mt-0.5">{players.length} player{players.length !== 1 ? 's' : ''}</p>
+          <p className="text-sm text-muted mt-0.5">
+            {players.length} player{players.length !== 1 ? "s" : ""}
+          </p>
         </div>
         <Button onClick={handleAdd}>
           <Plus size={16} />
@@ -52,7 +54,10 @@ export function PlayersPage() {
 
       <div className="flex gap-3 mb-4">
         <div className="relative flex-1 max-w-sm">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+          />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -66,7 +71,7 @@ export function PlayersPage() {
             onValueChange={setPositionFilter}
             placeholder="All positions"
           >
-            <SelectItem value="">All positions</SelectItem>
+            <SelectItem value="All">All positions</SelectItem>
             {POSITIONS.map((p) => (
               <SelectItem key={p.value} value={p.value}>
                 {p.value} – {p.label}
@@ -80,10 +85,12 @@ export function PlayersPage() {
             onValueChange={setGroupFilter}
             placeholder="All groups"
           >
-            <SelectItem value="">All groups</SelectItem>
+            <SelectItem value="All">All groups</SelectItem>
             <SelectItem value="unassigned">Unassigned</SelectItem>
             {groups.map((g) => (
-              <SelectItem key={g.id} value={g.id.toString()}>{g.name}</SelectItem>
+              <SelectItem key={g.id} value={g.id.toString()}>
+                {g.name}
+              </SelectItem>
             ))}
           </Select>
         </div>
@@ -95,24 +102,40 @@ export function PlayersPage() {
         ) : players.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-muted text-sm">
-              {search || positionFilter || groupFilter ? 'No players match your filters.' : 'No players yet. Add your first player to get started.'}
+              {search || positionFilter || groupFilter
+                ? "No players match your filters."
+                : "No players yet. Add your first player to get started."}
             </p>
           </div>
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-navy-600 bg-navy-900">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">Position</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">Prior Team</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">Assignment</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">Notes</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                  Position
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                  Prior Team
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                  Assignment
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                  Notes
+                </th>
                 <th className="px-4 py-3 w-20"></th>
               </tr>
             </thead>
             <tbody>
               {players.map((player) => (
-                <PlayerRow key={player.id} player={player} onEdit={handleEdit} />
+                <PlayerRow
+                  key={player.id}
+                  player={player}
+                  onEdit={handleEdit}
+                />
               ))}
             </tbody>
           </table>
@@ -121,7 +144,10 @@ export function PlayersPage() {
 
       <PlayerModal
         open={modalOpen}
-        onOpenChange={(open) => { setModalOpen(open); if (!open) setEditingPlayer(undefined); }}
+        onOpenChange={(open) => {
+          setModalOpen(open);
+          if (!open) setEditingPlayer(undefined);
+        }}
         player={editingPlayer}
       />
     </div>

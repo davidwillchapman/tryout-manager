@@ -1,18 +1,20 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
-import { Button } from '../components/ui/Button';
-import { Dialog, DialogContent } from '../components/ui/Dialog';
-import { Select, SelectItem } from '../components/ui/Select';
-import { TeamCard } from '../components/teams/TeamCard';
-import { TeamForm } from '../components/teams/TeamForm';
-import { useTeams, useCreateTeam } from '../api/teams';
-import { useGroups } from '../api/groups';
+import { useState } from "react";
+import { Plus } from "lucide-react";
+import { Button } from "../components/ui/Button";
+import { Dialog, DialogContent } from "../components/ui/Dialog";
+import { Select, SelectItem } from "../components/ui/Select";
+import { TeamCard } from "../components/teams/TeamCard";
+import { TeamForm } from "../components/teams/TeamForm";
+import { useTeams, useCreateTeam } from "../api/teams";
+import { useGroups } from "../api/groups";
 
 export function TeamsPage() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [groupFilter, setGroupFilter] = useState('');
+  const [groupFilter, setGroupFilter] = useState("");
   const { data: groups = [] } = useGroups();
-  const { data: teams = [], isLoading } = useTeams(groupFilter ? parseInt(groupFilter) : undefined);
+  const { data: teams = [], isLoading } = useTeams(
+    groupFilter ? parseInt(groupFilter) : undefined,
+  );
   const createTeam = useCreateTeam();
 
   return (
@@ -29,10 +31,16 @@ export function TeamsPage() {
       </div>
 
       <div className="mb-4 w-48">
-        <Select value={groupFilter} onValueChange={setGroupFilter} placeholder="All groups">
-          <SelectItem value="">All groups</SelectItem>
+        <Select
+          value={groupFilter}
+          onValueChange={setGroupFilter}
+          placeholder="All groups"
+        >
+          <SelectItem value="All">All groups</SelectItem>
           {groups.map((g) => (
-            <SelectItem key={g.id} value={g.id.toString()}>{g.name}</SelectItem>
+            <SelectItem key={g.id} value={g.id.toString()}>
+              {g.name}
+            </SelectItem>
           ))}
         </Select>
       </div>
@@ -42,7 +50,9 @@ export function TeamsPage() {
       ) : teams.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-muted text-sm">
-            {groupFilter ? 'No teams in this group.' : 'No teams yet. Create a team to start assigning players.'}
+            {groupFilter
+              ? "No teams in this group."
+              : "No teams yet. Create a team to start assigning players."}
           </p>
         </div>
       ) : (
@@ -56,7 +66,9 @@ export function TeamsPage() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent title="New Team">
           <TeamForm
-            onSubmit={(data) => createTeam.mutate(data, { onSuccess: () => setModalOpen(false) })}
+            onSubmit={(data) =>
+              createTeam.mutate(data, { onSuccess: () => setModalOpen(false) })
+            }
             onCancel={() => setModalOpen(false)}
             isLoading={createTeam.isPending}
           />
