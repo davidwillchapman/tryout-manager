@@ -32,8 +32,8 @@ export function TeamsPage() {
 
       <div className="mb-4 w-48">
         <Select
-          value={groupFilter}
-          onValueChange={setGroupFilter}
+          value={groupFilter || "All"}
+          onValueChange={(v) => setGroupFilter(v === "All" ? "" : v)}
           placeholder="All groups"
         >
           <SelectItem value="All">All groups</SelectItem>

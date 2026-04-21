@@ -10,7 +10,7 @@ export const playerKeys = {
 
 interface PlayerFilters {
   search?: string;
-  primary_position?: string;
+  position?: string;
   group_id?: string;
   team_id?: string;
 }
@@ -21,7 +21,7 @@ export function usePlayers(filters: PlayerFilters = {}) {
     queryFn: () => {
       const params = new URLSearchParams();
       if (filters.search) params.set('search', filters.search);
-      if (filters.primary_position) params.set('primary_position', filters.primary_position);
+      if (filters.position) params.set('position', filters.position);
       if (filters.group_id) params.set('group_id', filters.group_id);
       if (filters.team_id) params.set('team_id', filters.team_id);
       const qs = params.toString() ? `?${params}` : '';
@@ -81,6 +81,37 @@ export function useAssignPlayerGroup() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: playerKeys.all });
       qc.invalidateQueries({ queryKey: ['groups'] });
+    },
+  });
+}
+
+export interface ImportResult {
+  imported: number;
+  errors: Array<{ row: number; message: string }>;
+  players: Player[];
+}
+
+export function useImportPlayers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (csv: string): Promise<ImportResult> => {
+      const res = await fetch('/api/players/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/csv' },
+        body: csv,
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      return res.json();
+    },
+    onSuccess: (result) => {
+      if (result.imported > 0) {
+        qc.invalidateQueries({ queryKey: playerKeys.all });
+        qc.invalidateQueries({ queryKey: ['groups'] });
+        qc.invalidateQueries({ queryKey: ['teams'] });
+      }
     },
   });
 }

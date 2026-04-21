@@ -56,7 +56,7 @@ export function PlayerForm({
     setForm((f) => ({ ...f, [key]: value }));
 
   const handleGroupChange = (value: string) => {
-    const newGroupId = value ? parseInt(value) : null;
+    const newGroupId = value && value !== "None" ? parseInt(value) : null;
     // Clear team if it doesn't belong to the new group
     const currentTeam = teams.find((t) => t.id === form.team_id);
     const teamStillValid = currentTeam && currentTeam.group_id === newGroupId;
@@ -130,8 +130,8 @@ export function PlayerForm({
             Secondary Position
           </label>
           <Select
-            value={form.secondary_position ?? ""}
-            onValueChange={(v) => set("secondary_position", v || null)}
+            value={form.secondary_position ?? "None"}
+            onValueChange={(v) => set("secondary_position", v === "None" ? null : v)}
             placeholder="None"
           >
             <SelectItem value="None">None</SelectItem>
@@ -170,7 +170,7 @@ export function PlayerForm({
         <div>
           <label className="block text-xs text-muted mb-1">Group</label>
           <Select
-            value={form.group_id?.toString() ?? ""}
+            value={form.group_id?.toString() ?? "None"}
             onValueChange={handleGroupChange}
             placeholder="Unassigned"
           >
@@ -186,8 +186,8 @@ export function PlayerForm({
         <div>
           <label className="block text-xs text-muted mb-1">Team</label>
           <Select
-            value={form.team_id?.toString() ?? ""}
-            onValueChange={(v) => set("team_id", v ? parseInt(v) : null)}
+            value={form.team_id?.toString() ?? "None"}
+            onValueChange={(v) => set("team_id", v && v !== "None" ? parseInt(v) : null)}
             placeholder="Unassigned"
             disabled={availableTeams.length === 0}
           >
