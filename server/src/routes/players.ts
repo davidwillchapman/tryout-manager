@@ -259,15 +259,21 @@ router.delete('/:id', async (req, res, next) => {
 
 router.patch('/:id/group', async (req, res, next) => {
   try {
-    const existing = await db.execute({ sql: 'SELECT id FROM players WHERE id = ?', args: [req.params.id] });
-    if (!existing.rows[0]) { res.status(404).json({ error: 'Player not found' }); return; }
+    const existing = await db.execute({
+      sql: 'SELECT p.id, p.team_id, t.group_id AS team_group_id FROM players p LEFT JOIN teams t ON t.id = p.team_id WHERE p.id = ?',
+      args: [req.params.id],
+    });
+    const current = existing.rows[0];
+    if (!current) { res.status(404).json({ error: 'Player not found' }); return; }
     const { group_id } = req.body;
     if (group_id != null) {
       const g = await db.execute({ sql: 'SELECT id FROM groups WHERE id = ?', args: [group_id] });
       if (!g.rows[0]) { res.status(400).json({ error: 'Group not found' }); return; }
     }
-    // Clearing the group also clears the team assignment
-    const clearTeam = group_id == null;
+    // Clear team_id if it would become stale: either group is being cleared, or the
+    // player's current team belongs to a different group than the new one.
+    const teamGroupId = current.team_group_id == null ? null : Number(current.team_group_id);
+    const clearTeam = group_id == null || (current.team_id != null && teamGroupId !== group_id);
     await db.execute({
       sql: `UPDATE players SET group_id = ?${clearTeam ? ', team_id = NULL' : ''} WHERE id = ?`,
       args: [group_id ?? null, req.params.id],

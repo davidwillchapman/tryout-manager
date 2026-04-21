@@ -81,6 +81,7 @@ export function useAssignPlayerGroup() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: playerKeys.all });
       qc.invalidateQueries({ queryKey: ['groups'] });
+      qc.invalidateQueries({ queryKey: ['teams'] });
     },
   });
 }
