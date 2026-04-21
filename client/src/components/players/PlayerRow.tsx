@@ -46,7 +46,7 @@ export function PlayerRow({ player, onEdit }: PlayerRowProps) {
               <span className="text-xs text-muted">{player.group_name}</span>
             )}
             {player.team_name ? (
-              <Badge className="text-gold bg-navy-700 w-fit">{player.team_name}</Badge>
+              <Badge className="text-white bg-navy-700 w-fit">{player.team_name}</Badge>
             ) : player.group_name ? (
               <span className="text-xs text-navy-600 italic">No team</span>
             ) : (
