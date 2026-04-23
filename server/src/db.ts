@@ -45,5 +45,42 @@ export async function initDb(): Promise<void> {
   // Migration: add group_id to players if the DB already existed without it
   await db.execute(
     'ALTER TABLE players ADD COLUMN group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL'
-  ).catch(() => {}); // ignore "duplicate column name" if already present
+  ).catch(() => {});
+
+  await db.executeMultiple(`
+    CREATE TABLE IF NOT EXISTS league_seasons (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      name        TEXT NOT NULL,
+      year        INTEGER NOT NULL,
+      description TEXT,
+      source_url  TEXT,
+      created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS league_divisions (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      season_id   INTEGER NOT NULL REFERENCES league_seasons(id) ON DELETE CASCADE,
+      name        TEXT NOT NULL,
+      age_group   TEXT,
+      gender      TEXT,
+      division    TEXT,
+      source_url  TEXT,
+      created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS league_standings (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      division_id   INTEGER NOT NULL REFERENCES league_divisions(id) ON DELETE CASCADE,
+      team_name     TEXT NOT NULL,
+      points        INTEGER DEFAULT 0,
+      games_played  INTEGER DEFAULT 0,
+      wins          INTEGER DEFAULT 0,
+      losses        INTEGER DEFAULT 0,
+      ties          INTEGER DEFAULT 0,
+      goals_for     INTEGER DEFAULT 0,
+      goals_against INTEGER DEFAULT 0,
+      finish_place  INTEGER,
+      created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
 }

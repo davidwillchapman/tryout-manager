@@ -36,3 +36,46 @@ export interface PositionBreakdown {
   secondary: Record<string, number>;
   combined: Record<string, number>;
 }
+
+export interface LeagueSeason {
+  id: number;
+  name: string;
+  year: number;
+  description: string | null;
+  source_url: string | null;
+  division_count?: number;
+  created_at: string;
+}
+
+export interface LeagueDivision {
+  id: number;
+  season_id: number;
+  name: string;
+  age_group: string | null;
+  gender: string | null;
+  division: string | null;
+  source_url: string | null;
+  team_count?: number;
+  created_at: string;
+}
+
+export interface LeagueStanding {
+  id: number;
+  division_id: number;
+  team_name: string;
+  points: number;
+  games_played: number;
+  wins: number;
+  losses: number;
+  ties: number;
+  goals_for: number;
+  goals_against: number;
+  finish_place: number | null;
+  created_at: string;
+}
+
+export interface ImportSummary {
+  divisions_found: number;
+  teams_imported: number;
+  errors: string[];
+}

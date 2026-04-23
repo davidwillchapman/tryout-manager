@@ -5,6 +5,9 @@ import { AppShell } from './components/layout/AppShell';
 import { PlayersPage } from './pages/PlayersPage';
 import { GroupsPage } from './pages/GroupsPage';
 import { TeamsPage } from './pages/TeamsPage';
+import { LeagueResultsPage } from './pages/LeagueResultsPage';
+import { LeagueDivisionsPage } from './pages/LeagueDivisionsPage';
+import { LeagueStandingsPage } from './pages/LeagueStandingsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,6 +25,9 @@ export default function App() {
             <Route path="/players" element={<PlayersPage />} />
             <Route path="/groups"  element={<GroupsPage />} />
             <Route path="/teams"   element={<TeamsPage />} />
+            <Route path="/league-results" element={<LeagueResultsPage />} />
+            <Route path="/league-results/:seasonId" element={<LeagueDivisionsPage />} />
+            <Route path="/league-results/:seasonId/:divisionId" element={<LeagueStandingsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

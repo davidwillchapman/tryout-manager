@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { Users, Layers, Trophy } from 'lucide-react';
+import { Users, Layers, Trophy, Archive } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const navItems = [
-  { to: '/players', label: 'Players',  icon: Users },
-  { to: '/groups',  label: 'Groups',   icon: Layers },
-  { to: '/teams',   label: 'Teams',    icon: Trophy },
+  { to: '/players',        label: 'Players',        icon: Users },
+  { to: '/groups',         label: 'Groups',          icon: Layers },
+  { to: '/teams',          label: 'Teams',           icon: Trophy },
+  { to: '/league-results', label: 'League Results',  icon: Archive },
 ];
 
 export function Sidebar() {
