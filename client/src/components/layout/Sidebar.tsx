@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import logo from '../../assets/logo-white.png';
+import logo from '../../assets/logo-gap-white.png';
 
 type NavItem = {
   key: string;
