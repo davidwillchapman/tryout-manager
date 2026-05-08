@@ -6,8 +6,9 @@ import { GroupForm } from './GroupForm';
 import { PositionBreakdown } from './PositionBreakdown';
 import { PositionBadge } from '../players/PositionBadge';
 import { Badge } from '../ui/Badge';
-import { useUpdateGroup, useDeleteGroup, useGroupBreakdown, useGroupPlayers } from '../../api/groups';
+import { useUpdateGroup, useDeleteGroup, useGroupBreakdown, useGroupPlayers, useReorderGroupUnassigned } from '../../api/groups';
 import { useTeams } from '../../api/teams';
+import { useReorderTeamPlayers } from '../../api/teams';
 import { useAssignPlayerTeam } from '../../api/players';
 import type { Group, Player } from '../../types';
 
@@ -23,7 +24,25 @@ interface PlayerDragPayload {
   fromTeamId: number | null;
 }
 
-function DraggablePlayer({ player, fromGroupId }: { player: Player; fromGroupId: number }) {
+function DraggablePlayer({
+  player,
+  fromGroupId,
+  rank,
+  onReorder,
+}: {
+  player: Player;
+  fromGroupId: number;
+  rank: number;
+  onReorder: (draggedId: number, targetId: number, insertBefore: boolean) => void;
+}) {
+  const [insertPos, setInsertPos] = useState<'before' | 'after' | null>(null);
+
+  const readPayload = (e: React.DragEvent): PlayerDragPayload | null => {
+    const raw = e.dataTransfer.getData(PLAYER_DRAG_MIME);
+    if (!raw) return null;
+    try { return JSON.parse(raw) as PlayerDragPayload; } catch { return null; }
+  };
+
   return (
     <div
       draggable
@@ -36,9 +55,34 @@ function DraggablePlayer({ player, fromGroupId }: { player: Player; fromGroupId:
         e.dataTransfer.setData(PLAYER_DRAG_MIME, JSON.stringify(payload));
         e.dataTransfer.effectAllowed = 'move';
       }}
-      className="flex items-center gap-2 px-3 py-1.5 cursor-grab active:cursor-grabbing hover:bg-navy-700/60 transition-colors"
-      title="Drag to another team in this group"
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes(PLAYER_DRAG_MIME)) return;
+        e.preventDefault();
+        const rect = e.currentTarget.getBoundingClientRect();
+        setInsertPos(e.clientY < rect.top + rect.height / 2 ? 'before' : 'after');
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+        setInsertPos(null);
+      }}
+      onDrop={(e) => {
+        const pos = insertPos;
+        setInsertPos(null);
+        const payload = readPayload(e);
+        if (!payload) return;
+        if (payload.fromTeamId === player.team_id && payload.playerId !== player.id) {
+          e.preventDefault();
+          e.stopPropagation();
+          onReorder(payload.playerId, player.id, pos === 'before');
+        }
+        // cross-team drop: let event bubble to TeamSection
+      }}
+      className={`flex items-center gap-2 px-3 py-1.5 cursor-grab active:cursor-grabbing hover:bg-navy-700/60 transition-colors border-t border-b border-transparent ${
+        insertPos === 'before' ? 'border-t-gold' : insertPos === 'after' ? 'border-b-gold' : ''
+      }`}
+      title="Drag to reorder or move to another team"
     >
+      <span className="text-xs text-muted w-5 text-right shrink-0 tabular-nums">{rank}</span>
       <GripVertical size={12} className="text-muted shrink-0" />
       <span className="text-sm text-white flex-1 truncate">{player.name}</span>
       <PositionBadge position={player.primary_position} />
@@ -47,32 +91,27 @@ function DraggablePlayer({ player, fromGroupId }: { player: Player; fromGroupId:
   );
 }
 
-// Accepts drops from players in the same group whose current team_id differs from targetTeamId.
-// targetTeamId === null means "unassigned" (clear team_id).
-function usePlayerDropZone(groupId: number, targetTeamId: number | null) {
+// Accepts drops from players in the same group. For same-team drops (append to end),
+// pass onSameTeamDrop. For cross-team drops, assigns the player to targetTeamId.
+function usePlayerDropZone(
+  groupId: number,
+  targetTeamId: number | null,
+  onSameTeamDrop?: (playerId: number) => void,
+) {
   const [isOver, setIsOver] = useState(false);
   const assignTeam = useAssignPlayerTeam();
 
   const readPayload = (e: React.DragEvent): PlayerDragPayload | null => {
     const raw = e.dataTransfer.getData(PLAYER_DRAG_MIME);
     if (!raw) return null;
-    try {
-      return JSON.parse(raw) as PlayerDragPayload;
-    } catch {
-      return null;
-    }
+    try { return JSON.parse(raw) as PlayerDragPayload; } catch { return null; }
   };
-
-  const accepts = (payload: PlayerDragPayload | null) =>
-    payload != null && payload.fromGroupId === groupId && payload.fromTeamId !== targetTeamId;
 
   return {
     isOver,
     dropHandlers: {
       onDragOver: (e: React.DragEvent) => {
         if (!e.dataTransfer.types.includes(PLAYER_DRAG_MIME)) return;
-        // We can't read payload during dragover (browser hides data), so we optimistically
-        // highlight any player drag. The drop handler enforces the real acceptance check.
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         if (!isOver) setIsOver(true);
@@ -84,10 +123,15 @@ function usePlayerDropZone(groupId: number, targetTeamId: number | null) {
       onDrop: (e: React.DragEvent) => {
         setIsOver(false);
         const payload = readPayload(e);
-        if (!accepts(payload)) return;
+        if (!payload || payload.fromGroupId !== groupId) return;
         e.preventDefault();
         e.stopPropagation();
-        assignTeam.mutate({ id: payload!.playerId, team_id: targetTeamId });
+        if (payload.fromTeamId === targetTeamId) {
+          // Same-team drop on section header → append to end
+          onSameTeamDrop?.(payload.playerId);
+        } else {
+          assignTeam.mutate({ id: payload.playerId, team_id: targetTeamId });
+        }
       },
     },
   };
@@ -106,7 +150,22 @@ function TeamSection({
 }) {
   const [expanded, setExpanded] = useState(false);
   const teamPlayers = players.filter((p) => p.team_id === teamId);
-  const { isOver, dropHandlers } = usePlayerDropZone(groupId, teamId);
+  const reorder = useReorderTeamPlayers();
+
+  const handleReorder = (draggedId: number, targetId: number, insertBefore: boolean) => {
+    const ids = teamPlayers.map((p) => p.id).filter((id) => id !== draggedId);
+    if (targetId === -1) {
+      ids.push(draggedId);
+    } else {
+      const targetIdx = ids.indexOf(targetId);
+      ids.splice(insertBefore ? targetIdx : targetIdx + 1, 0, draggedId);
+    }
+    reorder.mutate({ teamId, playerIds: ids });
+  };
+
+  const { isOver, dropHandlers } = usePlayerDropZone(groupId, teamId, (playerId) =>
+    handleReorder(playerId, -1, false)
+  );
 
   return (
     <div
@@ -128,8 +187,14 @@ function TeamSection({
           {teamPlayers.length === 0 ? (
             <p className="text-xs text-muted italic px-3 pb-2">No players assigned</p>
           ) : (
-            teamPlayers.map((p) => (
-              <DraggablePlayer key={p.id} player={p} fromGroupId={groupId} />
+            teamPlayers.map((p, i) => (
+              <DraggablePlayer
+                key={p.id}
+                player={p}
+                fromGroupId={groupId}
+                rank={i + 1}
+                onReorder={handleReorder}
+              />
             ))
           )}
         </div>
@@ -150,7 +215,22 @@ export function GroupCard({ group }: GroupCardProps) {
   const { data: teams = [] } = useTeams(group.id);
 
   const unassignedPlayers = allPlayers.filter((p) => p.team_id === null);
-  const unassignedDrop = usePlayerDropZone(group.id, null);
+  const reorderUnassigned = useReorderGroupUnassigned();
+
+  const handleUnassignedReorder = (draggedId: number, targetId: number, insertBefore: boolean) => {
+    const ids = unassignedPlayers.map((p) => p.id).filter((id) => id !== draggedId);
+    if (targetId === -1) {
+      ids.push(draggedId);
+    } else {
+      const targetIdx = ids.indexOf(targetId);
+      ids.splice(insertBefore ? targetIdx : targetIdx + 1, 0, draggedId);
+    }
+    reorderUnassigned.mutate({ groupId: group.id, playerIds: ids });
+  };
+
+  const unassignedDrop = usePlayerDropZone(group.id, null, (playerId) =>
+    handleUnassignedReorder(playerId, -1, false)
+  );
 
   return (
     <>
@@ -209,8 +289,14 @@ export function GroupCard({ group }: GroupCardProps) {
                       Drop a player here to remove their team assignment
                     </p>
                   ) : (
-                    unassignedPlayers.map((p) => (
-                      <DraggablePlayer key={p.id} player={p} fromGroupId={group.id} />
+                    unassignedPlayers.map((p, i) => (
+                      <DraggablePlayer
+                        key={p.id}
+                        player={p}
+                        fromGroupId={group.id}
+                        rank={i + 1}
+                        onReorder={handleUnassignedReorder}
+                      />
                     ))
                   )}
                 </div>

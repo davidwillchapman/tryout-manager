@@ -74,10 +74,26 @@ router.get('/:id/players', async (req, res, next) => {
             FROM players p
             LEFT JOIN groups g ON g.id = p.group_id
             LEFT JOIN teams t ON t.id = p.team_id
-            WHERE p.group_id = ? ORDER BY p.name`,
+            WHERE p.group_id = ? ORDER BY p.team_order IS NULL, p.team_order ASC, p.name ASC`,
       args: [req.params.id],
     });
     res.json(result.rows);
+  } catch (err) { next(err); }
+});
+
+router.patch('/:id/unassigned-player-order', async (req, res, next) => {
+  try {
+    const groupId = Number(req.params.id);
+    const group = await db.execute({ sql: 'SELECT id FROM groups WHERE id = ?', args: [groupId] });
+    if (!group.rows[0]) { res.status(404).json({ error: 'Group not found' }); return; }
+    const { playerIds } = req.body as { playerIds: number[] };
+    if (!Array.isArray(playerIds)) { res.status(400).json({ error: 'playerIds must be an array' }); return; }
+    await Promise.all(
+      playerIds.map((pid, i) =>
+        db.execute({ sql: 'UPDATE players SET team_order = ? WHERE id = ? AND group_id = ? AND team_id IS NULL', args: [i + 1, pid, groupId] })
+      )
+    );
+    res.status(204).send();
   } catch (err) { next(err); }
 });
 

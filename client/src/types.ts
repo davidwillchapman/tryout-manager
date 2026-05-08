@@ -26,6 +26,7 @@ export interface Player {
   notes: string | null;
   group_id: number | null;
   team_id: number | null;
+  team_order: number | null;
   group_name: string | null;
   team_name: string | null;
   created_at: string;

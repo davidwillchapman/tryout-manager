@@ -62,3 +62,15 @@ export function useDeleteTeam() {
     },
   });
 }
+
+export function useReorderTeamPlayers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ teamId, playerIds }: { teamId: number; playerIds: number[] }) =>
+      apiFetch<void>(`/teams/${teamId}/player-order`, { method: 'PATCH', body: JSON.stringify({ playerIds }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: teamKeys.all });
+      qc.invalidateQueries({ queryKey: ['groups'] });
+    },
+  });
+}

@@ -47,6 +47,11 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE players ADD COLUMN group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL'
   ).catch(() => {});
 
+  // Migration: add team_order for ranking players within a team
+  await db.execute(
+    'ALTER TABLE players ADD COLUMN team_order INTEGER'
+  ).catch(() => {});
+
   await db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS league_seasons (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -56,6 +56,17 @@ export function useUpdateGroup() {
   });
 }
 
+export function useReorderGroupUnassigned() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, playerIds }: { groupId: number; playerIds: number[] }) =>
+      apiFetch<void>(`/groups/${groupId}/unassigned-player-order`, { method: 'PATCH', body: JSON.stringify({ playerIds }) }),
+    onSuccess: (_, { groupId }) => {
+      qc.invalidateQueries({ queryKey: groupKeys.players(groupId) });
+    },
+  });
+}
+
 export function useDeleteGroup() {
   const qc = useQueryClient();
   return useMutation({

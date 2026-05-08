@@ -291,8 +291,12 @@ router.patch('/:id/team', async (req, res, next) => {
     if (team_id != null) {
       const t = await db.execute({ sql: 'SELECT id FROM teams WHERE id = ?', args: [team_id] });
       if (!t.rows[0]) { res.status(400).json({ error: 'Team not found' }); return; }
+      const ord = await db.execute({ sql: 'SELECT COALESCE(MAX(team_order), 0) + 1 AS next FROM players WHERE team_id = ?', args: [team_id] });
+      const next = Number(ord.rows[0].next);
+      await db.execute({ sql: 'UPDATE players SET team_id = ?, team_order = ? WHERE id = ?', args: [team_id, next, req.params.id] });
+    } else {
+      await db.execute({ sql: 'UPDATE players SET team_id = NULL, team_order = NULL WHERE id = ?', args: [req.params.id] });
     }
-    await db.execute({ sql: 'UPDATE players SET team_id = ? WHERE id = ?', args: [team_id ?? null, req.params.id] });
     const row = await db.execute({ sql: `${baseSelect} WHERE p.id = ?`, args: [req.params.id] });
     res.json(row.rows[0]);
   } catch (err) { next(err); }

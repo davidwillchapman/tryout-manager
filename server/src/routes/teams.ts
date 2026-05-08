@@ -73,6 +73,22 @@ router.delete('/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.patch('/:id/player-order', async (req, res, next) => {
+  try {
+    const teamId = Number(req.params.id);
+    const team = await db.execute({ sql: 'SELECT id FROM teams WHERE id = ?', args: [teamId] });
+    if (!team.rows[0]) { res.status(404).json({ error: 'Team not found' }); return; }
+    const { playerIds } = req.body as { playerIds: number[] };
+    if (!Array.isArray(playerIds)) { res.status(400).json({ error: 'playerIds must be an array' }); return; }
+    await Promise.all(
+      playerIds.map((pid, i) =>
+        db.execute({ sql: 'UPDATE players SET team_order = ? WHERE id = ? AND team_id = ?', args: [i + 1, pid, teamId] })
+      )
+    );
+    res.status(204).send();
+  } catch (err) { next(err); }
+});
+
 router.get('/:id/players', async (req, res, next) => {
   try {
     const result = await db.execute({
@@ -80,7 +96,7 @@ router.get('/:id/players', async (req, res, next) => {
             FROM players p
             LEFT JOIN teams t ON t.id = p.team_id
             LEFT JOIN groups g ON g.id = t.group_id
-            WHERE p.team_id = ? ORDER BY p.name`,
+            WHERE p.team_id = ? ORDER BY p.team_order IS NULL, p.team_order ASC, p.name ASC`,
       args: [req.params.id],
     });
     res.json(result.rows);
