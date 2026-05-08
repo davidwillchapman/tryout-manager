@@ -1,7 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AppShell } from './components/layout/AppShell';
+import { HomePage } from './pages/HomePage';
+import { PlaymakerPage } from './pages/PlaymakerPage';
+import { SquadAssistPage } from './pages/SquadAssistPage';
+import { TryoutManagerPage } from './pages/TryoutManagerPage';
 import { PlayersPage } from './pages/PlayersPage';
 import { GroupsPage } from './pages/GroupsPage';
 import { TeamsPage } from './pages/TeamsPage';
@@ -21,7 +25,10 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<AppShell />}>
-            <Route index element={<Navigate to="/players" replace />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/playmaker" element={<PlaymakerPage />} />
+            <Route path="/squad-assist" element={<SquadAssistPage />} />
+            <Route path="/tryout-manager" element={<TryoutManagerPage />} />
             <Route path="/players" element={<PlayersPage />} />
             <Route path="/groups"  element={<GroupsPage />} />
             <Route path="/teams"   element={<TeamsPage />} />
