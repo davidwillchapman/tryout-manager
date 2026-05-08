@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import logo from '../../assets/logo-white.png';
 
 type NavItem = {
   key: string;
@@ -58,8 +59,12 @@ export function Sidebar() {
 
   return (
     <aside className="w-56 shrink-0 bg-navy-900 border-r border-navy-600 flex flex-col">
-      <div className="px-5 py-5 border-b border-navy-600">
-        <span className="text-gold font-bold text-lg tracking-tight">Sideline Sidekick</span>
+      <div className="px-5 py-4 border-b border-navy-600">
+        <img
+          src={logo}
+          alt="Sideline Kick"
+          className="h-16 w-auto object-contain"
+        />
       </div>
       <nav className="flex-1 py-3">
         {navItems.map((item) => {
