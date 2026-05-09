@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { BookOpen, Plus, Upload, Trash2, ChevronRight, ChevronDown, Edit2, Check, X } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Dialog, DialogContent } from '../components/ui/Dialog';
@@ -86,15 +87,15 @@ function SectionNode({ section, frameworkId, selectedId, onSelect, depth = 0 }: 
   );
 }
 
-// ─── Section Content Editor ──────────────────────────────────────────────────
+// ─── Section Edit Form ───────────────────────────────────────────────────────
 
-interface SectionEditorProps {
+interface SectionEditFormProps {
   section: FrameworkSection;
   frameworkId: number;
+  onDone: () => void;
 }
 
-function SectionEditor({ section, frameworkId }: SectionEditorProps) {
-  const [editing, setEditing] = useState(false);
+function SectionEditForm({ section, frameworkId, onDone }: SectionEditFormProps) {
   const [title, setTitle] = useState(section.title);
   const [content, setContent] = useState(section.content ?? '');
   const updateSection = useUpdateSection();
@@ -102,58 +103,98 @@ function SectionEditor({ section, frameworkId }: SectionEditorProps) {
   const handleSave = () => {
     updateSection.mutate(
       { frameworkId, sectionId: section.id, title, content: content || null, parent_id: section.parent_id, order_index: section.order_index },
-      { onSuccess: () => setEditing(false) }
+      { onSuccess: onDone }
     );
   };
 
-  const handleCancel = () => {
-    setTitle(section.title);
-    setContent(section.content ?? '');
-    setEditing(false);
-  };
+  return (
+    <div className="flex flex-col gap-3">
+      <Input value={title} onChange={(e) => setTitle(e.target.value)} className="text-base font-semibold" />
+      <Textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        rows={16}
+        placeholder="Section content (markdown supported)..."
+        className="font-mono text-xs"
+      />
+      <div className="flex gap-2 justify-end">
+        <Button size="sm" variant="ghost" onClick={onDone}>
+          <X size={12} /> Cancel
+        </Button>
+        <Button size="sm" variant="primary" onClick={handleSave} disabled={updateSection.isPending}>
+          <Check size={12} /> Save
+        </Button>
+      </div>
+    </div>
+  );
+}
 
-  // Sync when section changes
-  if (!editing && (title !== section.title || content !== (section.content ?? ''))) {
-    setTitle(section.title);
-    setContent(section.content ?? '');
+// ─── Section View ────────────────────────────────────────────────────────────
+
+interface SectionViewProps {
+  section: FrameworkSection;
+  frameworkId: number;
+  onSelectChild: (s: FrameworkSection) => void;
+}
+
+function SectionView({ section, frameworkId, onSelectChild }: SectionViewProps) {
+  const [editing, setEditing] = useState(false);
+
+  // Sync editing state off when section changes
+  const [lastSectionId, setLastSectionId] = useState(section.id);
+  if (section.id !== lastSectionId) {
+    setLastSectionId(section.id);
+    setEditing(false);
+  }
+
+  const hasChildren = section.children && section.children.length > 0;
+
+  if (editing) {
+    return (
+      <SectionEditForm
+        section={section}
+        frameworkId={frameworkId}
+        onDone={() => setEditing(false)}
+      />
+    );
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        {editing ? (
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} className="text-base font-semibold flex-1 mr-2" />
-        ) : (
-          <h3 className="text-base font-semibold text-white flex-1">{section.title}</h3>
-        )}
-        <div className="flex gap-1">
-          {editing ? (
-            <>
-              <Button size="sm" variant="primary" onClick={handleSave} disabled={updateSection.isPending}>
-                <Check size={12} /> Save
-              </Button>
-              <Button size="sm" variant="ghost" onClick={handleCancel}>
-                <X size={12} />
-              </Button>
-            </>
-          ) : (
-            <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-              <Edit2 size={12} /> Edit
-            </Button>
-          )}
-        </div>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <h3 className="text-base font-semibold text-white leading-tight">{section.title}</h3>
+        <Button size="sm" variant="ghost" onClick={() => setEditing(true)} className="shrink-0">
+          <Edit2 size={12} /> Edit
+        </Button>
       </div>
-      {editing ? (
-        <Textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          rows={16}
-          placeholder="Section content (markdown supported)..."
-          className="font-mono text-xs"
-        />
-      ) : (
-        <div className="bg-navy-900 border border-navy-700 rounded p-4 text-sm text-gray-300 whitespace-pre-wrap min-h-[200px]">
-          {section.content || <span className="text-muted italic">No content — click Edit to add.</span>}
+
+      {section.content && (
+        <div className="prose prose-invert prose-sm max-w-none">
+          <ReactMarkdown>{section.content}</ReactMarkdown>
+        </div>
+      )}
+
+      {!section.content && !hasChildren && (
+        <p className="text-muted italic text-sm">No content — click Edit to add.</p>
+      )}
+
+      {hasChildren && (
+        <div className="flex flex-col gap-2 mt-2">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wider">Sub-sections</p>
+          {section.children!.map((child) => {
+            const firstLine = child.content?.split('\n').find((l) => l.trim()) ?? '';
+            const preview = firstLine.replace(/^#+\s*/, '').replace(/[*_`]/g, '').slice(0, 120);
+            return (
+              <button
+                key={child.id}
+                onClick={() => onSelectChild(child)}
+                className="text-left bg-navy-800 border border-navy-700 rounded p-3 hover:border-gold hover:bg-navy-700 transition-colors group"
+              >
+                <p className="text-sm font-medium text-white group-hover:text-gold transition-colors">{child.title}</p>
+                {preview && <p className="text-xs text-muted mt-0.5 truncate">{preview}</p>}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -346,7 +387,7 @@ function ImportModal({ open, onClose, onCreated }: ImportModalProps) {
             </div>
           </div>
           <div>
-            <label className="block text-xs text-muted mb-1">File (.pdf / .md / .txt)</label>
+            <label className="block text-xs text-muted mb-1">File (.md / .txt)</label>
             <div
               className="flex items-center gap-3 border border-navy-600 rounded px-3 py-2 cursor-pointer hover:border-gold"
               onClick={() => fileRef.current?.click()}
@@ -357,7 +398,7 @@ function ImportModal({ open, onClose, onCreated }: ImportModalProps) {
             <input
               ref={fileRef}
               type="file"
-              accept=".pdf,.md,.txt"
+              accept=".md,.txt"
               className="hidden"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
@@ -506,7 +547,7 @@ function DetailPanel({ frameworkId }: DetailPanelProps) {
         {/* Section content */}
         <div className="flex-1 overflow-y-auto p-5">
           {liveSelected ? (
-            <SectionEditor section={liveSelected} frameworkId={fw.id} />
+            <SectionView section={liveSelected} frameworkId={fw.id} onSelectChild={setSelectedSection} />
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <BookOpen size={32} className="text-navy-600 mb-3" />

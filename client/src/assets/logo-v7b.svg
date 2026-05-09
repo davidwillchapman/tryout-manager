@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 290 90" overflow="visible">
+  <defs>
+    <mask id="cuts-b" maskUnits="userSpaceOnUse">
+      <rect width="290" height="90" fill="white"/>
+      <rect x="42.5" y="-10" width="7" height="110" fill="black"
+        transform="rotate(-25, 46, 45)"/>
+      <rect x="93.5" y="-10" width="7" height="110" fill="black"
+        transform="rotate(-25, 97, 45)"/>
+    </mask>
+  </defs>
+
+  <g mask="url(#cuts-b)">
+    <text x="6" y="44"
+      font-family="Impact, 'Arial Narrow', sans-serif"
+      font-size="44"
+      fill="#ffffff">SIDELINE</text>
+
+    <!-- SIDEKICK: shadow ~9am, skew anchored at TOP (y=44) so bottoms extend right -->
+    <g transform="translate(6, 44) skewX(22) translate(-6, -44)">
+      <text x="6" y="76"
+        font-family="Impact, 'Arial Narrow', sans-serif"
+        font-size="44"
+        fill="rgba(255,255,255,0.38)">SIDEKICK</text>
+    </g>
+  </g>
+</svg>

@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+.prose {
+  --tw-prose-body: rgb(209 213 219);
+  --tw-prose-headings: white;
+  --tw-prose-bullets: rgb(156 163 175);
+  --tw-prose-bold: white;
+  --tw-prose-links: #FCCF09;
+  --tw-prose-code: rgb(209 213 219);
+  --tw-prose-counters: rgb(156 163 175);
+}
+
 @layer base {
   * {
     box-sizing: border-box;

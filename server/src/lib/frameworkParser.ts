@@ -14,7 +14,10 @@ export function parseMarkdownText(text: string): ParsedSection[] {
 
   const flushContent = () => {
     if (stack.length > 0) {
-      stack[stack.length - 1].content = currentContent.join('\n').trim();
+      stack[stack.length - 1].content = currentContent
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
     }
     currentContent = [];
   };
@@ -53,18 +56,9 @@ export function parseMarkdownText(text: string): ParsedSection[] {
 
 export async function parseFile(
   buffer: Buffer,
-  mimetype: string,
-  originalname: string
+  _mimetype: string,
+  _originalname: string
 ): Promise<ParsedSection[]> {
-  const ext = originalname.split('.').pop()?.toLowerCase();
-
-  if (mimetype === 'application/pdf' || ext === 'pdf') {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require('pdf-parse') as (b: Buffer) => Promise<{ text: string }>;
-    const data = await pdfParse(buffer);
-    return parseMarkdownText(data.text);
-  }
-
   return parseMarkdownText(buffer.toString('utf-8'));
 }
 

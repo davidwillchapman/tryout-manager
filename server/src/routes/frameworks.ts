@@ -84,10 +84,10 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
     const frameworkId = ins.lastInsertRowid!;
 
     if (req.file) {
-      const allowed = ['application/pdf', 'text/markdown', 'text/plain'];
+      const allowed = ['text/markdown', 'text/plain'];
       const ext = req.file.originalname.split('.').pop()?.toLowerCase();
-      if (!allowed.includes(req.file.mimetype) && !['pdf', 'md', 'txt'].includes(ext ?? '')) {
-        res.status(400).json({ error: 'Only .pdf, .md, and .txt files are accepted' });
+      if (!allowed.includes(req.file.mimetype) && !['md', 'txt'].includes(ext ?? '')) {
+        res.status(400).json({ error: 'Only .md and .txt files are accepted' });
         return;
       }
 
