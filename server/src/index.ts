@@ -6,6 +6,7 @@ import groupsRouter from './routes/groups';
 import teamsRouter from './routes/teams';
 import playersRouter from './routes/players';
 import leagueResultsRouter from './routes/leagueResults';
+import frameworksRouter from './routes/frameworks';
 import errorHandler from './middleware/errorHandler';
 
 const app = express();
@@ -22,6 +23,7 @@ app.use('/api/groups', groupsRouter);
 app.use('/api/teams', teamsRouter);
 app.use('/api/players', playersRouter);
 app.use('/api/league-results', leagueResultsRouter);
+app.use('/api/frameworks', frameworksRouter);
 
 if (process.env.NODE_ENV === 'production') {
   const clientDist = path.resolve(__dirname, '../../client/dist');

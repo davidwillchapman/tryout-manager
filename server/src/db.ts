@@ -87,5 +87,26 @@ export async function initDb(): Promise<void> {
       finish_place  INTEGER,
       created_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS frameworks (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      name        TEXT NOT NULL,
+      source      TEXT,
+      version     TEXT,
+      description TEXT,
+      created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS framework_sections (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      framework_id INTEGER NOT NULL REFERENCES frameworks(id) ON DELETE CASCADE,
+      parent_id    INTEGER REFERENCES framework_sections(id) ON DELETE CASCADE,
+      title        TEXT NOT NULL,
+      content      TEXT,
+      order_index  INTEGER NOT NULL DEFAULT 0,
+      created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 }

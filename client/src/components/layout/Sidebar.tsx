@@ -32,6 +32,7 @@ const navItems: NavItem[] = [
       { label: 'Standings', to: '/league-results' },
     ],
   },
+  { key: 'dna-frameworks', label: 'DNA Frameworks', to: '/dna-frameworks' },
 ];
 
 function childRoutes(item: NavItem): string[] {

@@ -80,3 +80,30 @@ export interface ImportSummary {
   teams_imported: number;
   errors: string[];
 }
+
+export interface Framework {
+  id: number;
+  name: string;
+  source: string | null;
+  version: string | null;
+  description: string | null;
+  section_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FrameworkSection {
+  id: number;
+  framework_id: number;
+  parent_id: number | null;
+  title: string;
+  content: string | null;
+  order_index: number;
+  children?: FrameworkSection[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FrameworkWithSections extends Framework {
+  sections: FrameworkSection[];
+}

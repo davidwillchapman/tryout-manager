@@ -12,6 +12,7 @@ import { TeamsPage } from './pages/TeamsPage';
 import { LeagueResultsPage } from './pages/LeagueResultsPage';
 import { LeagueDivisionsPage } from './pages/LeagueDivisionsPage';
 import { LeagueStandingsPage } from './pages/LeagueStandingsPage';
+import { DNAFrameworksPage } from './pages/DNAFrameworksPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="/league-results" element={<LeagueResultsPage />} />
             <Route path="/league-results/:seasonId" element={<LeagueDivisionsPage />} />
             <Route path="/league-results/:seasonId/:divisionId" element={<LeagueStandingsPage />} />
+            <Route path="/dna-frameworks" element={<DNAFrameworksPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
