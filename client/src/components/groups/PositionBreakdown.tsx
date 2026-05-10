@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
 import { aggregateByGroup, POSITION_GROUPS } from '../../lib/positions';
+import type { PositionGroup } from '../../lib/positions';
 import type { PositionBreakdown as BreakdownData } from '../../types';
 
 type Mode = 'primary' | 'secondary' | 'combined';
@@ -12,7 +13,9 @@ interface PositionBreakdownProps {
 export function PositionBreakdown({ data }: PositionBreakdownProps) {
   const [mode, setMode] = useState<Mode>('combined');
 
-  const counts = aggregateByGroup(data[mode]);
+  const counts: Record<PositionGroup, number> = mode === 'combined'
+    ? { GK: data.combined['GK'] ?? 0, DEF: data.combined['DEF'] ?? 0, MID: data.combined['MID'] ?? 0, FWD: data.combined['FWD'] ?? 0 }
+    : aggregateByGroup(data[mode]);
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
   return (

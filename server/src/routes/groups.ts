@@ -106,10 +106,12 @@ router.get('/:id/breakdown', async (req, res, next) => {
     const toMap = (rows: { position: unknown; count: unknown }[]) =>
       Object.fromEntries(rows.map((r) => [r.position as string, Number(r.count)]));
 
+    const posToGroup = `CASE primary_position WHEN 'GK' THEN 'GK' WHEN 'CB' THEN 'DEF' WHEN 'FB' THEN 'DEF' WHEN 'CDM' THEN 'MID' WHEN 'CM' THEN 'MID' WHEN 'CAM' THEN 'MID' WHEN 'WNG' THEN 'FWD' WHEN 'ST' THEN 'FWD' END`;
+    const secToGroup = posToGroup.replace(/primary_position/g, 'secondary_position');
     const [primary, secondary, combined] = await Promise.all([
       db.execute({ sql: `SELECT primary_position AS position, COUNT(*) AS count FROM players ${inGroup} GROUP BY primary_position`, args: [id] }),
       db.execute({ sql: `SELECT secondary_position AS position, COUNT(*) AS count FROM players ${inGroup} AND secondary_position IS NOT NULL GROUP BY secondary_position`, args: [id] }),
-      db.execute({ sql: `SELECT position, COUNT(*) AS count FROM (SELECT primary_position AS position FROM players ${inGroup} UNION ALL SELECT secondary_position AS position FROM players ${inGroup} AND secondary_position IS NOT NULL) GROUP BY position`, args: [id, id, id] }),
+      db.execute({ sql: `SELECT pos_group AS position, COUNT(*) AS count FROM (SELECT id, ${posToGroup} AS pos_group FROM players ${inGroup} UNION SELECT id, ${secToGroup} AS pos_group FROM players ${inGroup} AND secondary_position IS NOT NULL) GROUP BY pos_group`, args: [id, id] }),
     ]);
 
     const breakdown: BreakdownResponse = {

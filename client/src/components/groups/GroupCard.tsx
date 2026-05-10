@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Pencil, Trash2, ChevronDown, ChevronRight, GripVertical } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Dialog, DialogContent, DialogClose } from '../ui/Dialog';
@@ -29,13 +30,34 @@ function DraggablePlayer({
   fromGroupId,
   rank,
   onReorder,
+  teams,
 }: {
   player: Player;
   fromGroupId: number;
   rank: number;
   onReorder: (draggedId: number, targetId: number, insertBefore: boolean) => void;
+  teams: Array<{ id: number; name: string }>;
 }) {
   const [insertPos, setInsertPos] = useState<'before' | 'after' | null>(null);
+  const [sendToOpen, setSendToOpen] = useState(false);
+  const [overlayPos, setOverlayPos] = useState<{ top: number; left: number } | null>(null);
+  const arrowRef = useRef<HTMLButtonElement>(null);
+  const assignTeam = useAssignPlayerTeam();
+
+  useEffect(() => {
+    if (!sendToOpen) return;
+    const close = () => setSendToOpen(false);
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [sendToOpen]);
+
+  const openSendTo = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (sendToOpen) { setSendToOpen(false); return; }
+    const rect = arrowRef.current?.getBoundingClientRect();
+    if (rect) setOverlayPos({ top: rect.bottom + 4, left: rect.left });
+    setSendToOpen(true);
+  };
 
   const readPayload = (e: React.DragEvent): PlayerDragPayload | null => {
     const raw = e.dataTransfer.getData(PLAYER_DRAG_MIME);
@@ -44,50 +66,105 @@ function DraggablePlayer({
   };
 
   return (
-    <div
-      draggable
-      onDragStart={(e) => {
-        const payload: PlayerDragPayload = {
-          playerId: player.id,
-          fromGroupId,
-          fromTeamId: player.team_id,
-        };
-        e.dataTransfer.setData(PLAYER_DRAG_MIME, JSON.stringify(payload));
-        e.dataTransfer.effectAllowed = 'move';
-      }}
-      onDragOver={(e) => {
-        if (!e.dataTransfer.types.includes(PLAYER_DRAG_MIME)) return;
-        e.preventDefault();
-        const rect = e.currentTarget.getBoundingClientRect();
-        setInsertPos(e.clientY < rect.top + rect.height / 2 ? 'before' : 'after');
-      }}
-      onDragLeave={(e) => {
-        if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-        setInsertPos(null);
-      }}
-      onDrop={(e) => {
-        const pos = insertPos;
-        setInsertPos(null);
-        const payload = readPayload(e);
-        if (!payload) return;
-        if (payload.fromTeamId === player.team_id && payload.playerId !== player.id) {
+    <>
+      <div
+        draggable
+        onDragStart={(e) => {
+          const payload: PlayerDragPayload = {
+            playerId: player.id,
+            fromGroupId,
+            fromTeamId: player.team_id,
+          };
+          e.dataTransfer.setData(PLAYER_DRAG_MIME, JSON.stringify(payload));
+          e.dataTransfer.effectAllowed = 'move';
+        }}
+        onDragOver={(e) => {
+          if (!e.dataTransfer.types.includes(PLAYER_DRAG_MIME)) return;
           e.preventDefault();
-          e.stopPropagation();
-          onReorder(payload.playerId, player.id, pos === 'before');
-        }
-        // cross-team drop: let event bubble to TeamSection
-      }}
-      className={`flex items-center gap-2 px-3 py-1.5 cursor-grab active:cursor-grabbing hover:bg-navy-700/60 transition-colors border-t border-b border-transparent ${
-        insertPos === 'before' ? 'border-t-gold' : insertPos === 'after' ? 'border-b-gold' : ''
-      }`}
-      title="Drag to reorder or move to another team"
-    >
-      <span className="text-xs text-muted w-5 text-right shrink-0 tabular-nums">{rank}</span>
-      <GripVertical size={12} className="text-muted shrink-0" />
-      <span className="text-sm text-white flex-1 truncate">{player.name}</span>
-      <PositionBadge position={player.primary_position} />
-      {player.secondary_position && <PositionBadge position={player.secondary_position} muted />}
-    </div>
+          const rect = e.currentTarget.getBoundingClientRect();
+          setInsertPos(e.clientY < rect.top + rect.height / 2 ? 'before' : 'after');
+        }}
+        onDragLeave={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+          setInsertPos(null);
+        }}
+        onDrop={(e) => {
+          const pos = insertPos;
+          setInsertPos(null);
+          const payload = readPayload(e);
+          if (!payload) return;
+          if (payload.fromTeamId === player.team_id && payload.playerId !== player.id) {
+            e.preventDefault();
+            e.stopPropagation();
+            onReorder(payload.playerId, player.id, pos === 'before');
+          }
+          // cross-team drop: let event bubble to TeamSection
+        }}
+        className={`flex items-center gap-2 px-2 py-1.5 cursor-grab active:cursor-grabbing hover:bg-navy-700/60 transition-colors border-t border-b border-transparent ${
+          insertPos === 'before' ? 'border-t-gold' : insertPos === 'after' ? 'border-b-gold' : ''
+        }`}
+        title="Drag to reorder or move to another team"
+      >
+        <button
+          ref={arrowRef}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={openSendTo}
+          className="text-muted hover:text-white shrink-0 p-0.5 rounded hover:bg-navy-600 transition-colors"
+          title="Send to team"
+        >
+          <ChevronRight size={12} />
+        </button>
+        <span className="text-xs text-muted w-5 text-right shrink-0 tabular-nums">{rank}</span>
+        <GripVertical size={12} className="text-muted shrink-0" />
+        <span className="text-sm text-white truncate">{player.name}</span>
+        {(player.prior_team || player.prior_team_division) && (
+          <span className="text-xs text-muted/60 italic truncate shrink min-w-0">
+            {[player.prior_team, player.prior_team_division].filter(Boolean).join(' · ')}
+          </span>
+        )}
+        <span className="flex-1" />
+        <PositionBadge position={player.primary_position} />
+        {player.secondary_position && <PositionBadge position={player.secondary_position} muted />}
+      </div>
+
+      {sendToOpen && overlayPos && createPortal(
+        <>
+          <div className="fixed inset-0 z-40" onMouseDown={() => setSendToOpen(false)} />
+          <div
+            className="fixed z-50 bg-navy-800 border border-navy-600 rounded shadow-lg py-1 min-w-36"
+            style={{ top: overlayPos.top, left: overlayPos.left }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <p className="text-xs text-muted px-3 pt-1 pb-1.5 uppercase tracking-wider border-b border-navy-700">Send to</p>
+            {teams.map((team) => (
+              <button
+                key={team.id}
+                disabled={player.team_id === team.id}
+                onClick={() => {
+                  assignTeam.mutate({ id: player.id, team_id: team.id });
+                  setSendToOpen(false);
+                }}
+                className="w-full text-left text-sm px-3 py-1.5 hover:bg-navy-700 text-white disabled:text-muted disabled:cursor-default transition-colors"
+              >
+                {team.name}
+              </button>
+            ))}
+            {player.team_id !== null && (
+              <button
+                onClick={() => {
+                  assignTeam.mutate({ id: player.id, team_id: null });
+                  setSendToOpen(false);
+                }}
+                className="w-full text-left text-sm px-3 py-1.5 hover:bg-navy-700 text-muted hover:text-white transition-colors border-t border-navy-700 mt-1"
+              >
+                Unassigned
+              </button>
+            )}
+          </div>
+        </>,
+        document.body
+      )}
+    </>
   );
 }
 
@@ -142,11 +219,13 @@ function TeamSection({
   teamName,
   players,
   groupId,
+  teams,
 }: {
   teamId: number;
   teamName: string;
   players: Player[];
   groupId: number;
+  teams: Array<{ id: number; name: string }>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const teamPlayers = players.filter((p) => p.team_id === teamId);
@@ -194,6 +273,7 @@ function TeamSection({
                 fromGroupId={groupId}
                 rank={i + 1}
                 onReorder={handleReorder}
+                teams={teams}
               />
             ))
           )}
@@ -296,6 +376,7 @@ export function GroupCard({ group }: GroupCardProps) {
                         fromGroupId={group.id}
                         rank={i + 1}
                         onReorder={handleUnassignedReorder}
+                        teams={teams}
                       />
                     ))
                   )}
@@ -307,7 +388,7 @@ export function GroupCard({ group }: GroupCardProps) {
           {/* Teams */}
           {teams.length > 0 ? (
             teams.map((team) => (
-              <TeamSection key={team.id} teamId={team.id} teamName={team.name} players={allPlayers} groupId={group.id} />
+              <TeamSection key={team.id} teamId={team.id} teamName={team.name} players={allPlayers} groupId={group.id} teams={teams} />
             ))
           ) : unassignedPlayers.length === 0 ? (
             <p className="text-xs text-muted italic">No teams or players in this group yet</p>

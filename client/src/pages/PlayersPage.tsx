@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Plus, Search, Upload, X } from "lucide-react";
+import { Download, Plus, Search, Upload, X } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Select, SelectItem } from "../components/ui/Select";
@@ -51,6 +51,49 @@ export function PlayersPage() {
     setModalOpen(true);
   };
 
+  const handleDownloadTemplate = () => {
+    const positionList = POSITIONS.map((p) => p.value).join("/");
+    const headers = [
+      "name",
+      "primary_position",
+      "secondary_position",
+      "prior_team",
+      "prior_team_division",
+      "notes",
+      "group",
+      "team",
+    ];
+    const notes = [
+      `Required. Player full name.`,
+      `Required. One of: ${positionList}`,
+      `Optional. One of: ${positionList}`,
+      `Optional. Previous club name.`,
+      `Optional. Previous club division/league.`,
+      `Optional. Freeform notes.`,
+      `Optional. Group name (must exist in app).`,
+      `Optional. Team name (must exist in app).`,
+    ];
+    const examples = [
+      ["Alex Johnson", "GK", "", "FC United", "Premier", "Strong shot-stopper", "Group A", "Team 1"],
+      ["Jordan Smith", "CB", "FB", "City FC", "Division 1", "", "Group A", "Team 1"],
+      ["Sam Lee", "ST", "WNG", "Bay United", "", "", "", ""],
+    ];
+    const escape = (v: string) => (v.includes(",") ? `"${v}"` : v);
+    const toRow = (cols: string[]) => cols.map(escape).join(",");
+    const csv = [
+      "# " + headers.map((h, i) => `${h}: ${notes[i]}`).join(" | "),
+      toRow(headers),
+      ...examples.map(toRow),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "players-import-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-picking the same file
@@ -83,6 +126,14 @@ export function PlayersPage() {
             className="hidden"
             onChange={handleFileChange}
           />
+          <Button
+            variant="ghost"
+            onClick={handleDownloadTemplate}
+            title="Download CSV template"
+          >
+            <Download size={16} />
+            Template
+          </Button>
           <Button
             variant="outline"
             onClick={() => fileInputRef.current?.click()}

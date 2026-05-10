@@ -1,17 +1,12 @@
 export const POSITIONS = [
-  { value: 'GK',  label: 'Goalkeeper',     group: 'GK'  },
-  { value: 'CB',  label: 'Center Back',    group: 'DEF' },
-  { value: 'LB',  label: 'Left Back',      group: 'DEF' },
-  { value: 'RB',  label: 'Right Back',     group: 'DEF' },
-  { value: 'CDM', label: 'Defensive Mid',  group: 'MID' },
-  { value: 'CM',  label: 'Center Mid',     group: 'MID' },
-  { value: 'CAM', label: 'Attacking Mid',  group: 'MID' },
-  { value: 'LM',  label: 'Left Mid',       group: 'MID' },
-  { value: 'RM',  label: 'Right Mid',      group: 'MID' },
-  { value: 'LW',  label: 'Left Wing',      group: 'FWD' },
-  { value: 'RW',  label: 'Right Wing',     group: 'FWD' },
-  { value: 'ST',  label: 'Striker',        group: 'FWD' },
-  { value: 'CF',  label: 'Center Forward', group: 'FWD' },
+  { value: 'GK',  label: 'Goalkeeper',    group: 'GK'  },
+  { value: 'CB',  label: 'Center Back',   group: 'DEF' },
+  { value: 'FB',  label: 'Full Back',     group: 'DEF' },
+  { value: 'CDM', label: 'Defensive Mid', group: 'MID' },
+  { value: 'CM',  label: 'Center Mid',    group: 'MID' },
+  { value: 'CAM', label: 'Attacking Mid', group: 'MID' },
+  { value: 'WNG', label: 'Winger',        group: 'FWD' },
+  { value: 'ST',  label: 'Striker',       group: 'FWD' },
 ] as const;
 
 export type PositionValue = typeof POSITIONS[number]['value'];
