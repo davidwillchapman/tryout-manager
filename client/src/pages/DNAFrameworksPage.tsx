@@ -30,7 +30,7 @@ interface SectionNodeProps {
 }
 
 function SectionNode({ section, frameworkId, selectedId, onSelect, depth = 0 }: SectionNodeProps) {
-  const [open, setOpen] = useState(depth < 2);
+  const [open, setOpen] = useState(false);
   const deleteSection = useDeleteSection();
   const hasChildren = section.children && section.children.length > 0;
 

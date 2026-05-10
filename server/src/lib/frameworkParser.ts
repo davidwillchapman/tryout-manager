@@ -27,6 +27,7 @@ export function parseMarkdownText(text: string): ParsedSection[] {
     if (headingMatch) {
       flushContent();
       const level = headingMatch[1].length;
+      if (level === 1) continue;
       const title = headingMatch[2].trim();
       const section: ParsedSection = { title, content: '', level, children: [] };
 
