@@ -107,3 +107,67 @@ export interface FrameworkSection {
 export interface FrameworkWithSections extends Framework {
   sections: FrameworkSection[];
 }
+
+export interface Activity {
+  id: number;
+  title: string;
+  summary: string;
+  description: string;
+  activity_type: string | null;
+  duration_minutes: number | null;
+  field_setup: string | null;
+  coaching_points: string | null;
+  flexibility_notes: string | null;
+  tag_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ActivityFrameworkTag {
+  id: number;
+  activity_id: number;
+  framework_id: number;
+  framework_name: string;
+  phase_section_id: number | null;
+  phase_title: string | null;
+  principle_section_id: number | null;
+  principle_title: string | null;
+  sub_principle_section_id: number | null;
+  sub_principle_title: string | null;
+  created_at: string;
+}
+
+export interface ActivityReference {
+  id: number;
+  activity_id: number;
+  url: string;
+  label: string | null;
+  order_index: number;
+  created_at: string;
+}
+
+export interface ActivityProgression {
+  id: number;
+  activity_id: number;
+  progression_activity_id: number;
+  progression_title: string;
+  progression_summary: string;
+  created_at: string;
+}
+
+export interface ActivityDetail extends Activity {
+  tags: ActivityFrameworkTag[];
+  references: ActivityReference[];
+  progressions: ActivityProgression[];
+}
+
+export interface ActivityImportResult {
+  activity: Activity;
+  warnings: string[];
+}
+
+export interface UploadedImage {
+  id: number;
+  filename: string;
+  url: string;
+}

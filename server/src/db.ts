@@ -4,6 +4,7 @@ import fs from 'fs';
 
 const DB_PATH = path.resolve(__dirname, '../../data/tryout.db');
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+fs.mkdirSync(path.resolve(__dirname, '../../data/images'), { recursive: true });
 
 export const db: Client = createClient({
   url: `file:${DB_PATH}`,
@@ -107,6 +108,55 @@ export async function initDb(): Promise<void> {
       order_index  INTEGER NOT NULL DEFAULT 0,
       created_at   TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS activities (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      title             TEXT NOT NULL,
+      summary           TEXT NOT NULL,
+      description       TEXT NOT NULL,
+      activity_type     TEXT,
+      duration_minutes  INTEGER,
+      field_setup       TEXT,
+      coaching_points   TEXT,
+      flexibility_notes TEXT,
+      created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS activity_framework_tags (
+      id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+      activity_id              INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+      framework_id             INTEGER NOT NULL REFERENCES frameworks(id) ON DELETE CASCADE,
+      phase_section_id         INTEGER REFERENCES framework_sections(id) ON DELETE SET NULL,
+      principle_section_id     INTEGER REFERENCES framework_sections(id) ON DELETE SET NULL,
+      sub_principle_section_id INTEGER REFERENCES framework_sections(id) ON DELETE SET NULL,
+      created_at               TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS activity_references (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+      url         TEXT NOT NULL,
+      label       TEXT,
+      order_index INTEGER NOT NULL DEFAULT 0,
+      created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS activity_progressions (
+      id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+      activity_id             INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+      progression_activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+      created_at              TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(activity_id, progression_activity_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS activity_images (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      filename      TEXT NOT NULL,
+      original_name TEXT,
+      mime_type     TEXT,
+      created_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
 }

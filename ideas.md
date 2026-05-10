@@ -1,22 +1,6 @@
-I want to manage teams in the system.
-
-DNA
-
-- I need a way to assign active vs inactive teams
-- I need to be able to import the various international and club DNA frameworks.
-- I need to be able to design my personal DNA framework.
-
-Drills
-
-- I need to be able to import images to use with training drills.
-- I need to be able to create, edit, and delete training drills.
-- I should be able to categorize drills based on the US Soccer Training Framework, including:
-    - noting the relevant phase(s) of play
-    - noting the main principle
-    - noting the sub principle
-
 Seasons
 
+- I need a way to assign active vs inactive teams
 - I need to be able to create a 'season' section for a team and schedule training sessions for the season.
 - I need a way to assign active vs inactive teams
 - I need to be able to look at a season training overview and check on high level stats regarding which phases of play we have worked on, which principles we have addressed, which sub principles we have addressed, etc.
@@ -31,18 +15,18 @@ Sessions
 Games
 
 - I need to be able to create game plans including:
-    - Creation via Form, Assessment via Form
-    - Game Details
-    - Pregame Plans
-    - Lineups
-        - Visual, Drag and Drop, Auto Populated based on team
-    - Postgame Summaries
-        - Results
-            - Goals For and Against
-            - High Level DNA Category Ratings
-        - Estimated Playing Time
-        - Player Ratings
-            - Relative to our Team
-            - Relative to Expectations of the Player
-            - Other Configurable Categories (Workrate, Technical, Tactical, etc.)
-        - Other Notes
+  - Creation via Form, Assessment via Form
+  - Game Details
+  - Pregame Plans
+  - Lineups
+    - Visual, Drag and Drop, Auto Populated based on team
+  - Postgame Summaries
+    - Results
+      - Goals For and Against
+      - High Level DNA Category Ratings
+    - Estimated Playing Time
+    - Player Ratings
+      - Relative to our Team
+      - Relative to Expectations of the Player
+      - Other Configurable Categories (Workrate, Technical, Tactical, etc.)
+    - Other Notes
