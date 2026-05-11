@@ -171,3 +171,33 @@ export interface UploadedImage {
   filename: string;
   url: string;
 }
+
+export type GamePhase =
+  | 'Attacking'
+  | 'Attacking to Defending Transition'
+  | 'Defending'
+  | 'Defending to Attacking Transition'
+  | 'Other';
+
+export interface SessionPlan {
+  id: number;
+  title: string;
+  game_phase: GamePhase;
+  overall_objective: string;
+  main_principle: string;
+  sub_principle_1: string | null;
+  sub_principle_2: string | null;
+  activity_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SessionActivity {
+  id: number;
+  order_index: number;
+  activity: Activity;
+}
+
+export interface SessionPlanDetail extends SessionPlan {
+  activities: SessionActivity[];
+}

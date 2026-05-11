@@ -159,4 +159,26 @@ export async function initDb(): Promise<void> {
       created_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
+  await db.executeMultiple(`
+    CREATE TABLE IF NOT EXISTS session_plans (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      title             TEXT NOT NULL,
+      game_phase        TEXT NOT NULL,
+      overall_objective TEXT NOT NULL,
+      main_principle    TEXT NOT NULL,
+      sub_principle_1   TEXT,
+      sub_principle_2   TEXT,
+      created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS session_activities (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id   INTEGER NOT NULL REFERENCES session_plans(id) ON DELETE CASCADE,
+      activity_id  INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+      order_index  INTEGER NOT NULL DEFAULT 0,
+      created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
 }

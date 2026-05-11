@@ -8,6 +8,7 @@ import playersRouter from './routes/players';
 import leagueResultsRouter from './routes/leagueResults';
 import frameworksRouter from './routes/frameworks';
 import activitiesRouter from './routes/activities';
+import sessionsRouter from './routes/sessions';
 import errorHandler from './middleware/errorHandler';
 
 const app = express();
@@ -26,6 +27,7 @@ app.use('/api/players', playersRouter);
 app.use('/api/league-results', leagueResultsRouter);
 app.use('/api/frameworks', frameworksRouter);
 app.use('/api/activities', activitiesRouter);
+app.use('/api/sessions', sessionsRouter);
 app.use('/images', express.static(path.resolve(__dirname, '../../data/images')));
 
 if (process.env.NODE_ENV === 'production') {
