@@ -76,7 +76,7 @@ export function PlayersPage() {
     const examples = [
       ["Alex Johnson", "GK", "", "FC United", "Premier", "Strong shot-stopper", "Group A", "Team 1"],
       ["Jordan Smith", "CB", "FB", "City FC", "Division 1", "", "Group A", "Team 1"],
-      ["Sam Lee", "ST", "WNG", "Bay United", "", "", "", ""],
+      ["Sam Lee", "STR", "WNG", "Bay United", "", "", "", ""],
     ];
     const escape = (v: string) => (v.includes(",") ? `"${v}"` : v);
     const toRow = (cols: string[]) => cols.map(escape).join(",");

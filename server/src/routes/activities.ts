@@ -39,6 +39,30 @@ const imageUpload = multer({
   limits: { fileSize: 20 * 1024 * 1024 },
 });
 
+// ─── Multer: video files (disk storage) ──────────────────────────────────────
+const videoStorage = multer.diskStorage({
+  destination: path.resolve(__dirname, '../../../data/videos'),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const name = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    cb(null, name);
+  },
+});
+const allowedVideoMimes = new Set(['video/mp4', 'video/quicktime', 'video/webm', 'video/ogg']);
+const allowedVideoExts = new Set(['.mp4', '.mov', '.webm', '.ogv']);
+const videoUpload = multer({
+  storage: videoStorage,
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedVideoMimes.has(file.mimetype) || allowedVideoExts.has(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only video files (mp4, mov, webm, ogv) are accepted'));
+    }
+  },
+  limits: { fileSize: 200 * 1024 * 1024 },
+});
+
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 const activitySchema = z.object({
   title: z.string().min(1),
@@ -49,6 +73,9 @@ const activitySchema = z.object({
   field_setup: z.string().optional().nullable(),
   coaching_points: z.string().optional().nullable(),
   flexibility_notes: z.string().optional().nullable(),
+  image_id: z.number().int().optional().nullable(),
+  video_url: z.string().optional().nullable(),
+  video_type: z.enum(['youtube', 'vimeo', 'upload']).optional().nullable(),
 });
 
 const tagSchema = z.object({
@@ -72,22 +99,29 @@ const progressionSchema = z.object({
 router.get('/', async (_req, res, next) => {
   try {
     const result = await db.execute(`
-      SELECT a.*, COUNT(aft.id) as tag_count
+      SELECT a.*, COUNT(aft.id) as tag_count,
+             ai.filename AS image_filename
       FROM activities a
       LEFT JOIN activity_framework_tags aft ON aft.activity_id = a.id
+      LEFT JOIN activity_images ai ON ai.id = a.image_id
       GROUP BY a.id ORDER BY a.title ASC
     `);
-    res.json(result.rows);
+    const rows = result.rows.map((r) => {
+      const row = r as Record<string, unknown>;
+      const { image_filename, ...rest } = row;
+      return { ...rest, image_url: image_filename ? `/images/${image_filename}` : null };
+    });
+    res.json(rows);
   } catch (err) { next(err); }
 });
 
 // ─── Create activity ──────────────────────────────────────────────────────────
 router.post('/', validateBody(activitySchema), async (req, res, next) => {
   try {
-    const { title, summary, description, activity_type, duration_minutes, field_setup, coaching_points, flexibility_notes } = req.body;
+    const { title, summary, description, activity_type, duration_minutes, field_setup, coaching_points, flexibility_notes, image_id, video_url, video_type } = req.body;
     const ins = await db.execute({
-      sql: 'INSERT INTO activities (title, summary, description, activity_type, duration_minutes, field_setup, coaching_points, flexibility_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      args: [title, summary, description, activity_type ?? null, duration_minutes ?? null, field_setup ?? null, coaching_points ?? null, flexibility_notes ?? null],
+      sql: 'INSERT INTO activities (title, summary, description, activity_type, duration_minutes, field_setup, coaching_points, flexibility_notes, image_id, video_url, video_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      args: [title, summary, description, activity_type ?? null, duration_minutes ?? null, field_setup ?? null, coaching_points ?? null, flexibility_notes ?? null, image_id ?? null, video_url ?? null, video_type ?? null],
     });
     const row = await db.execute({ sql: 'SELECT * FROM activities WHERE id = ?', args: [ins.lastInsertRowid!] });
     res.status(201).json(row.rows[0]);
@@ -183,8 +217,17 @@ router.post('/import', textUpload.single('file'), async (req, res, next) => {
 // ─── Get activity detail ──────────────────────────────────────────────────────
 router.get('/:id', async (req, res, next) => {
   try {
-    const act = await db.execute({ sql: 'SELECT * FROM activities WHERE id = ?', args: [req.params.id] });
+    const act = await db.execute({
+      sql: `SELECT a.*, ai.filename AS image_filename
+            FROM activities a
+            LEFT JOIN activity_images ai ON ai.id = a.image_id
+            WHERE a.id = ?`,
+      args: [req.params.id],
+    });
     if (!act.rows[0]) { res.status(404).json({ error: 'Activity not found' }); return; }
+    const actRow = act.rows[0] as Record<string, unknown>;
+    const { image_filename, ...actData } = actRow;
+    const activityWithImage = { ...actData, image_url: image_filename ? `/images/${image_filename}` : null };
 
     const tags = await db.execute({
       sql: `SELECT aft.*,
@@ -216,7 +259,7 @@ router.get('/:id', async (req, res, next) => {
       args: [req.params.id],
     });
 
-    res.json({ ...act.rows[0], tags: tags.rows, references: refs.rows, progressions: progs.rows });
+    res.json({ ...activityWithImage, tags: tags.rows, references: refs.rows, progressions: progs.rows });
   } catch (err) { next(err); }
 });
 
@@ -225,11 +268,12 @@ router.put('/:id', validateBody(activitySchema), async (req, res, next) => {
   try {
     const existing = await db.execute({ sql: 'SELECT id FROM activities WHERE id = ?', args: [req.params.id] });
     if (!existing.rows[0]) { res.status(404).json({ error: 'Activity not found' }); return; }
-    const { title, summary, description, activity_type, duration_minutes, field_setup, coaching_points, flexibility_notes } = req.body;
+    const { title, summary, description, activity_type, duration_minutes, field_setup, coaching_points, flexibility_notes, image_id, video_url, video_type } = req.body;
     await db.execute({
       sql: `UPDATE activities SET title=?, summary=?, description=?, activity_type=?, duration_minutes=?,
-            field_setup=?, coaching_points=?, flexibility_notes=?, updated_at=datetime('now') WHERE id=?`,
-      args: [title, summary, description, activity_type ?? null, duration_minutes ?? null, field_setup ?? null, coaching_points ?? null, flexibility_notes ?? null, req.params.id],
+            field_setup=?, coaching_points=?, flexibility_notes=?, image_id=?, video_url=?, video_type=?,
+            updated_at=datetime('now') WHERE id=?`,
+      args: [title, summary, description, activity_type ?? null, duration_minutes ?? null, field_setup ?? null, coaching_points ?? null, flexibility_notes ?? null, image_id ?? null, video_url ?? null, video_type ?? null, req.params.id],
     });
     const row = await db.execute({ sql: 'SELECT * FROM activities WHERE id = ?', args: [req.params.id] });
     res.json(row.rows[0]);
@@ -254,8 +298,8 @@ router.post('/:id/clone', async (req, res, next) => {
     const s = src.rows[0] as Record<string, unknown>;
 
     const ins = await db.execute({
-      sql: 'INSERT INTO activities (title, summary, description, activity_type, duration_minutes, field_setup, coaching_points, flexibility_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      args: [`${String(s.title ?? '')} (copy)`, s.summary as InValue, s.description as InValue, s.activity_type as InValue, s.duration_minutes as InValue, s.field_setup as InValue, s.coaching_points as InValue, s.flexibility_notes as InValue],
+      sql: 'INSERT INTO activities (title, summary, description, activity_type, duration_minutes, field_setup, coaching_points, flexibility_notes, image_id, video_url, video_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      args: [`${String(s.title ?? '')} (copy)`, s.summary as InValue, s.description as InValue, s.activity_type as InValue, s.duration_minutes as InValue, s.field_setup as InValue, s.coaching_points as InValue, s.flexibility_notes as InValue, s.image_id as InValue, s.video_url as InValue, s.video_type as InValue],
     });
     const newId = ins.lastInsertRowid!;
 
@@ -416,6 +460,15 @@ router.delete('/:id/progressions/:progressionId', async (req, res, next) => {
   try {
     await db.execute({ sql: 'DELETE FROM activity_progressions WHERE id = ? AND activity_id = ?', args: [req.params.progressionId, req.params.id] });
     res.status(204).send();
+  } catch (err) { next(err); }
+});
+
+// ─── Video upload ─────────────────────────────────────────────────────────────
+router.post('/videos', videoUpload.single('video'), async (req, res, next) => {
+  try {
+    const file = req.file;
+    if (!file) { res.status(400).json({ error: 'No video provided' }); return; }
+    res.status(201).json({ filename: file.filename, url: `/videos/${file.filename}` });
   } catch (err) { next(err); }
 });
 

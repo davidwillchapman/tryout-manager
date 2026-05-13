@@ -6,7 +6,7 @@ export const POSITIONS = [
   { value: 'CM',  label: 'Center Mid',    group: 'MID' },
   { value: 'CAM', label: 'Attacking Mid', group: 'MID' },
   { value: 'WNG', label: 'Winger',        group: 'FWD' },
-  { value: 'ST',  label: 'Striker',       group: 'FWD' },
+  { value: 'STR', label: 'Striker',       group: 'FWD' },
 ] as const;
 
 export type PositionValue = typeof POSITIONS[number]['value'];

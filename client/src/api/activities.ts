@@ -182,3 +182,14 @@ export function useUploadImage() {
       }),
   });
 }
+
+// ─── Video upload ─────────────────────────────────────────────────────────────
+export function useUploadVideo() {
+  return useMutation({
+    mutationFn: (formData: FormData) =>
+      fetch('/api/activities/videos', { method: 'POST', body: formData }).then(async (res) => {
+        if (!res.ok) throw new Error(await res.text());
+        return res.json() as Promise<{ filename: string; url: string }>;
+      }),
+  });
+}

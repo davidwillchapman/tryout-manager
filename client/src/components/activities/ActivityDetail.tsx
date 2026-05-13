@@ -99,6 +99,20 @@ export function ActivityDetail({ activityId, onDeleted, onCloned, onProgressionC
           <MarkdownBlock>{activity.description}</MarkdownBlock>
         </Section>
 
+        {/* Image */}
+        {activity.image_url && (
+          <Section label="Image">
+            <img src={activity.image_url} alt={activity.title} className="rounded max-h-64 object-contain" />
+          </Section>
+        )}
+
+        {/* Video */}
+        {activity.video_url && activity.video_type && (
+          <Section label="Video">
+            <VideoEmbed url={activity.video_url} type={activity.video_type} />
+          </Section>
+        )}
+
         {/* DNA Tags */}
         <Section
           label="DNA Tags"
@@ -209,6 +223,48 @@ export function ActivityDetail({ activityId, onDeleted, onCloned, onProgressionC
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
+
+function extractYouTubeId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+function extractVimeoId(url: string): string | null {
+  const m = url.match(/vimeo\.com\/(\d+)/);
+  return m ? m[1] : null;
+}
+
+function VideoEmbed({ url, type }: { url: string; type: 'youtube' | 'vimeo' | 'upload' }) {
+  if (type === 'youtube') {
+    const id = extractYouTubeId(url);
+    if (!id) return <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300">{url}</a>;
+    return (
+      <div className="aspect-video w-full">
+        <iframe
+          src={`https://www.youtube.com/embed/${id}`}
+          className="w-full h-full rounded"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+  if (type === 'vimeo') {
+    const id = extractVimeoId(url);
+    if (!id) return <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300">{url}</a>;
+    return (
+      <div className="aspect-video w-full">
+        <iframe
+          src={`https://player.vimeo.com/video/${id}`}
+          className="w-full h-full rounded"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+  return <video controls src={url} className="w-full rounded max-h-64" />;
+}
 
 function Section({ label, action, children }: { label: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (

@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Dumbbell, Plus, Upload, Image } from 'lucide-react';
+import { Dumbbell, Plus, Upload } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Dialog, DialogContent } from '../components/ui/Dialog';
 import { ActivityList } from '../components/activities/ActivityList';
 import { ActivityDetail } from '../components/activities/ActivityDetail';
 import { ActivityForm } from '../components/activities/ActivityForm';
 import { ImportActivityModal } from '../components/activities/ImportActivityModal';
-import { ImageUploadModal } from '../components/activities/ImageUploadModal';
 import { SessionList } from '../components/sessions/SessionList';
 import { SessionDetail } from '../components/sessions/SessionDetail';
 import { SessionForm } from '../components/sessions/SessionForm';
@@ -23,7 +22,6 @@ export function PlaymakerPage() {
   const [newActivityOpen, setNewActivityOpen] = useState(false);
   const [newSessionOpen, setNewSessionOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [imageOpen, setImageOpen] = useState(false);
   const createActivity = useCreateActivity();
   const createSession = useCreateSession();
 
@@ -82,14 +80,6 @@ export function PlaymakerPage() {
                   <Plus size={12} /> New
                 </Button>
               </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="w-full mt-2 text-xs justify-start"
-                onClick={() => setImageOpen(true)}
-              >
-                <Image size={12} /> Upload Image
-              </Button>
             </>
           ) : (
             <Button
@@ -192,10 +182,6 @@ export function PlaymakerPage() {
         onCreated={(id) => setSelectedActivityId(id)}
       />
 
-      <ImageUploadModal
-        open={imageOpen}
-        onClose={() => setImageOpen(false)}
-      />
     </div>
   );
 }

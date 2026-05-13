@@ -118,6 +118,10 @@ export interface Activity {
   field_setup: string | null;
   coaching_points: string | null;
   flexibility_notes: string | null;
+  image_id: number | null;
+  image_url: string | null;
+  video_url: string | null;
+  video_type: 'youtube' | 'vimeo' | 'upload' | null;
   tag_count?: number;
   created_at: string;
   updated_at: string;
@@ -200,4 +204,74 @@ export interface SessionActivity {
 
 export interface SessionPlanDetail extends SessionPlan {
   activities: SessionActivity[];
+}
+
+export interface SquadTeam {
+  id: number;
+  name: string;
+  description?: string | null;
+  source_team_id?: number | null;
+  is_active: boolean;
+  season_label?: string | null;
+  player_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SquadPlayer {
+  id: number;
+  squad_team_id: number;
+  source_player_id?: number | null;
+  name: string;
+  primary_position?: string | null;
+  secondary_position?: string | null;
+  jersey_number?: string | null;
+  depth_order: number;
+  status: 'active' | 'inactive' | 'injured';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Formation {
+  id: number;
+  squad_team_id: number;
+  name: string;
+  formation_code: string;
+  is_default: boolean;
+  slots?: FormationSlot[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FormationSlot {
+  id: number;
+  formation_id: number;
+  squad_player_id?: number | null;
+  slot_label: string;
+  role: 'starter' | 'first_sub';
+  x_pct: number;
+  y_pct: number;
+  player_name?: string | null;
+  jersey_number?: string | null;
+  primary_position?: string | null;
+  player_status?: string | null;
+}
+
+export interface FormationTemplateSlot {
+  id: number;
+  formation_template_id: number;
+  slot_label: string;
+  role: 'starter' | 'first_sub';
+  x_pct: number;
+  y_pct: number;
+}
+
+export interface FormationTemplate {
+  id: number;
+  name: string;
+  is_builtin: boolean;
+  slot_count?: number;
+  slots?: FormationTemplateSlot[];
+  created_at: string;
+  updated_at: string;
 }

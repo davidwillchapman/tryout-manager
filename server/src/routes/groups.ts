@@ -106,7 +106,7 @@ router.get('/:id/breakdown', async (req, res, next) => {
     const toMap = (rows: { position: unknown; count: unknown }[]) =>
       Object.fromEntries(rows.map((r) => [r.position as string, Number(r.count)]));
 
-    const posToGroup = `CASE primary_position WHEN 'GK' THEN 'GK' WHEN 'CB' THEN 'DEF' WHEN 'FB' THEN 'DEF' WHEN 'CDM' THEN 'MID' WHEN 'CM' THEN 'MID' WHEN 'CAM' THEN 'MID' WHEN 'WNG' THEN 'FWD' WHEN 'ST' THEN 'FWD' END`;
+    const posToGroup = `CASE primary_position WHEN 'GK' THEN 'GK' WHEN 'CB' THEN 'DEF' WHEN 'FB' THEN 'DEF' WHEN 'CDM' THEN 'MID' WHEN 'CM' THEN 'MID' WHEN 'CAM' THEN 'MID' WHEN 'WNG' THEN 'FWD' WHEN 'STR' THEN 'FWD' END`;
     const secToGroup = posToGroup.replace(/primary_position/g, 'secondary_position');
     const [primary, secondary, combined] = await Promise.all([
       db.execute({ sql: `SELECT primary_position AS position, COUNT(*) AS count FROM players ${inGroup} GROUP BY primary_position`, args: [id] }),
