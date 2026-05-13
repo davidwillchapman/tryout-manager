@@ -12,16 +12,33 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { key: 'playmaker',      label: 'Playmaker',       to: '/playmaker' },
-  { key: 'squad-assist',   label: 'Squad Assist',    to: '/squad-assist' },
+  {
+    key: 'playmaker',
+    label: 'Playmaker',
+    to: '/playmaker/activities',
+    children: [
+      { label: 'Activities', to: '/playmaker/activities' },
+      { label: 'Sessions',   to: '/playmaker/sessions' },
+      { label: 'Images',     to: '/playmaker/images' },
+    ],
+  },
+  {
+    key: 'squad-assist',
+    label: 'Squad Assist',
+    to: '/squad-assist/squads',
+    children: [
+      { label: 'Squads',               to: '/squad-assist/squads' },
+      { label: 'Formation Templates',  to: '/squad-assist/formation-templates' },
+    ],
+  },
   {
     key: 'tryout-manager',
     label: 'Tryout Manager',
     to: '/tryout-manager',
     children: [
-      { label: 'Players', to: '/players' },
       { label: 'Groups',  to: '/groups' },
       { label: 'Teams',   to: '/teams' },
+      { label: 'Players', to: '/players' },
     ],
   },
   {

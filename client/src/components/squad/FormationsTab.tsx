@@ -4,7 +4,6 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Dialog, DialogContent } from '../ui/Dialog';
 import { FormationCanvas } from './FormationCanvas';
-import { FormationTemplateManager } from './FormationTemplateManager';
 import {
   useFormations,
   useCreateFormation,
@@ -18,8 +17,6 @@ interface Props {
   teamId: number;
 }
 
-type SubView = 'formations' | 'templates';
-
 export function FormationsTab({ teamId }: Props) {
   const { data: formations = [] } = useFormations(teamId);
   const { data: templates = [] } = useFormationTemplates();
@@ -27,7 +24,6 @@ export function FormationsTab({ teamId }: Props) {
   const setDefault = useSetDefaultFormation(teamId);
   const deleteFormation = useDeleteFormation(teamId);
 
-  const [subView, setSubView] = useState<SubView>('formations');
   const [newOpen, setNewOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newTemplateId, setNewTemplateId] = useState<number | null>(null);
@@ -58,30 +54,7 @@ export function FormationsTab({ teamId }: Props) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Sub-view toggle */}
-      <div className="flex gap-1 px-3 pt-2 border-b border-navy-700 shrink-0">
-        {(['formations', 'templates'] as SubView[]).map((v) => (
-          <button
-            key={v}
-            onClick={() => setSubView(v)}
-            className={cn(
-              'text-xs py-1.5 px-3 capitalize transition-colors',
-              subView === v
-                ? 'text-white border-b-2 border-gold -mb-[1px]'
-                : 'text-muted hover:text-white'
-            )}
-          >
-            {v}
-          </button>
-        ))}
-      </div>
-
-      {subView === 'templates' ? (
-        <div className="flex-1 overflow-hidden">
-          <FormationTemplateManager />
-        </div>
-      ) : (
-        <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
           {/* Formations list */}
           <div className="w-56 shrink-0 border-r border-navy-700 flex flex-col overflow-hidden">
             <div className="px-3 py-2 border-b border-navy-700 flex items-center justify-between shrink-0">
@@ -180,7 +153,6 @@ export function FormationsTab({ teamId }: Props) {
             )}
           </div>
         </div>
-      )}
 
       {/* New Formation dialog */}
       <Dialog open={newOpen} onOpenChange={(v) => !v && setNewOpen(false)}>

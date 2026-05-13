@@ -1,10 +1,12 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AppShell } from './components/layout/AppShell';
 import { HomePage } from './pages/HomePage';
 import { PlaymakerPage } from './pages/PlaymakerPage';
+import { PlaymakerImagesPage } from './pages/PlaymakerImagesPage';
 import { SquadAssistPage } from './pages/SquadAssistPage';
+import { FormationTemplatesPage } from './pages/FormationTemplatesPage';
 import { TryoutManagerPage } from './pages/TryoutManagerPage';
 import { PlayersPage } from './pages/PlayersPage';
 import { GroupsPage } from './pages/GroupsPage';
@@ -27,8 +29,13 @@ export default function App() {
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/" element={<HomePage />} />
-            <Route path="/playmaker" element={<PlaymakerPage />} />
-            <Route path="/squad-assist" element={<SquadAssistPage />} />
+            <Route path="/playmaker" element={<Navigate to="/playmaker/activities" replace />} />
+            <Route path="/playmaker/activities" element={<PlaymakerPage defaultMode="activities" />} />
+            <Route path="/playmaker/sessions"   element={<PlaymakerPage defaultMode="sessions" />} />
+            <Route path="/playmaker/images"     element={<PlaymakerImagesPage />} />
+            <Route path="/squad-assist" element={<Navigate to="/squad-assist/squads" replace />} />
+            <Route path="/squad-assist/squads"              element={<SquadAssistPage />} />
+            <Route path="/squad-assist/formation-templates" element={<FormationTemplatesPage />} />
             <Route path="/tryout-manager" element={<TryoutManagerPage />} />
             <Route path="/players" element={<PlayersPage />} />
             <Route path="/groups"  element={<GroupsPage />} />

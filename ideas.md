@@ -1,10 +1,3 @@
-Squad Assist
-
-- I need to be able to create a team and schedule training sessions for the season.
-- I need a way to mark teams as active vs inactive
-- I need to be able to look at a season training overview and check on high level stats regarding which phases of play we have worked on, which principles we have addressed, which sub principles we have addressed, etc.
-- I need to be able to evaluate my team and be able to see how my session objective selections and performances track to these evaluations.
-
 Sessions
 
 - I need to be able to evaluate a training session, and track these evaluations at the drill level and season level.
@@ -29,3 +22,9 @@ Games
       - Relative to Expectations of the Player
       - Other Configurable Categories (Workrate, Technical, Tactical, etc.)
     - Other Notes
+
+Adjustments
+
+- Styling
+  - I want the application styling to be reviewed. The styling of tryout manager and league results is different than that of playmaker, squad assist and DNA frameworks
+  - Collapsable Navs

@@ -11,12 +11,11 @@ import { SessionDetail } from '../components/sessions/SessionDetail';
 import { SessionForm } from '../components/sessions/SessionForm';
 import { useCreateActivity } from '../api/activities';
 import { useCreateSession } from '../api/sessions';
-import { cn } from '../lib/utils';
 
 type Mode = 'activities' | 'sessions';
 
-export function PlaymakerPage() {
-  const [mode, setMode] = useState<Mode>('activities');
+export function PlaymakerPage({ defaultMode }: { defaultMode: Mode }) {
+  const mode = defaultMode;
   const [selectedActivityId, setSelectedActivityId] = useState<number | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
   const [newActivityOpen, setNewActivityOpen] = useState(false);
@@ -33,32 +32,6 @@ export function PlaymakerPage() {
           <div className="flex items-center gap-2 mb-3">
             <Dumbbell size={16} className="text-gold" />
             <h1 className="text-sm font-bold text-white uppercase tracking-wider">Playmaker</h1>
-          </div>
-
-          {/* Mode toggle */}
-          <div className="flex gap-1 mb-3 border-b border-navy-700 pb-2">
-            <button
-              onClick={() => setMode('activities')}
-              className={cn(
-                'flex-1 text-xs py-1 transition-colors',
-                mode === 'activities'
-                  ? 'text-white border-b-2 border-gold -mb-[2px]'
-                  : 'text-muted hover:text-white'
-              )}
-            >
-              Activities
-            </button>
-            <button
-              onClick={() => setMode('sessions')}
-              className={cn(
-                'flex-1 text-xs py-1 transition-colors',
-                mode === 'sessions'
-                  ? 'text-white border-b-2 border-gold -mb-[2px]'
-                  : 'text-muted hover:text-white'
-              )}
-            >
-              Sessions
-            </button>
           </div>
 
           {mode === 'activities' ? (
