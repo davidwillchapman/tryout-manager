@@ -40,8 +40,10 @@ function DraggablePlayer({
 }) {
   const [insertPos, setInsertPos] = useState<'before' | 'after' | null>(null);
   const [sendToOpen, setSendToOpen] = useState(false);
-  const [overlayPos, setOverlayPos] = useState<{ top: number; left: number } | null>(null);
+  const [overlayPos, setOverlayPos] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const arrowRef = useRef<HTMLButtonElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const triggerRectRef = useRef<DOMRect | null>(null);
   const assignTeam = useAssignPlayerTeam();
 
   useEffect(() => {
@@ -51,11 +53,28 @@ function DraggablePlayer({
     return () => document.removeEventListener('mousedown', close);
   }, [sendToOpen]);
 
+  useEffect(() => {
+    if (!sendToOpen || !overlayRef.current || !triggerRectRef.current) return;
+    const rect = triggerRectRef.current;
+    const overlayHeight = overlayRef.current.offsetHeight;
+    const overlayWidth = overlayRef.current.offsetWidth;
+    const spaceBelow = window.innerHeight - rect.bottom - 4;
+    const clampedLeft = Math.min(rect.left, window.innerWidth - overlayWidth - 8);
+    if (overlayHeight > spaceBelow) {
+      setOverlayPos({ bottom: window.innerHeight - rect.top + 4, top: undefined, left: clampedLeft });
+    } else {
+      setOverlayPos((prev) => prev ? { ...prev, left: clampedLeft } : prev);
+    }
+  }, [sendToOpen]);
+
   const openSendTo = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (sendToOpen) { setSendToOpen(false); return; }
     const rect = arrowRef.current?.getBoundingClientRect();
-    if (rect) setOverlayPos({ top: rect.bottom + 4, left: rect.left });
+    if (rect) {
+      triggerRectRef.current = rect;
+      setOverlayPos({ top: rect.bottom + 4, bottom: undefined, left: rect.left });
+    }
     setSendToOpen(true);
   };
 
@@ -131,8 +150,9 @@ function DraggablePlayer({
         <>
           <div className="fixed inset-0 z-40" onMouseDown={() => setSendToOpen(false)} />
           <div
+            ref={overlayRef}
             className="fixed z-50 bg-navy-800 border border-navy-600 rounded shadow-lg py-1 min-w-36"
-            style={{ top: overlayPos.top, left: overlayPos.left }}
+            style={{ top: overlayPos.top, bottom: overlayPos.bottom, left: overlayPos.left }}
             onMouseDown={(e) => e.stopPropagation()}
           >
             <p className="text-xs text-muted px-3 pt-1 pb-1.5 uppercase tracking-wider border-b border-navy-700">Send to</p>

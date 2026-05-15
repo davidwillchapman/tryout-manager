@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Save, RotateCcw, Layout } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { useSquadPlayers, useFormation, useSaveFormationSlots, useUpdateSlotPositions } from '../../api/squad';
+import { useSquadPlayers, useFormation, useSaveFormationSlots, useUpdateSlotPositions, useUpdateFormation } from '../../api/squad';
 import { cn } from '../../lib/utils';
 import type { FormationSlot, SquadPlayer } from '../../types';
 
@@ -13,7 +13,7 @@ interface Props {
 type SlotState = Map<number, number | null>; // slotId -> squadPlayerId | null
 type PositionState = Map<number, { x_pct: number; y_pct: number }>;
 
-function truncate(s: string, max = 9) {
+function truncatePart(s: string, max = 8) {
   return s.length > max ? s.slice(0, max - 1) + '…' : s;
 }
 
@@ -40,6 +40,7 @@ export function FormationCanvas({ teamId, formationId }: Props) {
   const { data: players = [] } = useSquadPlayers(teamId);
   const saveSlots = useSaveFormationSlots(teamId, formationId);
   const updateSlotPositions = useUpdateSlotPositions(teamId, formationId);
+  const updateFormation = useUpdateFormation(teamId);
 
   const [assignments, setAssignments] = useState<SlotState>(new Map());
   const [saved, setSaved] = useState<SlotState>(new Map());
@@ -47,6 +48,7 @@ export function FormationCanvas({ teamId, formationId }: Props) {
   const [draggingFromSlotId, setDraggingFromSlotId] = useState<number | null>(null);
   const [overSlotId, setOverSlotId] = useState<number | null>(null);
   const [formationName, setFormationName] = useState('');
+  const [savedFormationName, setSavedFormationName] = useState('');
   const [editingName, setEditingName] = useState(false);
 
   // Edit Layout mode
@@ -69,6 +71,7 @@ export function FormationCanvas({ teamId, formationId }: Props) {
     setPositions(new Map(posMap));
     setSavedPositions(new Map(posMap));
     setFormationName(formation.name);
+    setSavedFormationName(formation.name);
   }, [formation]);
 
   const assignedPlayerIds = new Set(
@@ -145,11 +148,18 @@ export function FormationCanvas({ teamId, formationId }: Props) {
 
   function handleSave() {
     const payload = Array.from(assignments.entries()).map(([slot_id, squad_player_id]) => ({ slot_id, squad_player_id }));
+    if (formationName !== savedFormationName && formation) {
+      updateFormation.mutate(
+        { formationId: formationId, name: formationName, formation_code: formation.formation_code },
+        { onSuccess: () => setSavedFormationName(formationName) }
+      );
+    }
     saveSlots.mutate(payload, { onSuccess: () => setSaved(new Map(assignments)) });
   }
 
   function handleReset() {
     setAssignments(new Map(saved));
+    setFormationName(savedFormationName);
   }
 
   // ── Edit Layout mode: slot position drag ──────────────────────────────────
@@ -198,9 +208,11 @@ export function FormationCanvas({ teamId, formationId }: Props) {
     setPositions(new Map(savedPositions));
   }
 
-  let isDirty = false;
-  for (const [k, v] of assignments) {
-    if (saved.get(k) !== v) { isDirty = true; break; }
+  let isDirty = formationName !== savedFormationName;
+  if (!isDirty) {
+    for (const [k, v] of assignments) {
+      if (saved.get(k) !== v) { isDirty = true; break; }
+    }
   }
 
   let isLayoutDirty = false;
@@ -243,7 +255,11 @@ export function FormationCanvas({ teamId, formationId }: Props) {
                     {p.jersey_number && <span className="text-muted text-[10px] w-4 shrink-0">{p.jersey_number}</span>}
                     <span className="truncate">{p.name}</span>
                   </div>
-                  {p.primary_position && <span className="text-[9px] text-muted">{p.primary_position}</span>}
+                  {(p.primary_position || p.secondary_position) && (
+                    <span className="text-[9px] text-muted">
+                      {[p.primary_position, p.secondary_position].filter(Boolean).join(' / ')}
+                    </span>
+                  )}
                 </div>
               ))
             )}
@@ -327,7 +343,7 @@ export function FormationCanvas({ teamId, formationId }: Props) {
                     <div
                       key={slot.id}
                       style={{ left: `${pos.x_pct}%`, top: `${pos.y_pct}%`, transform: 'translate(-50%, -50%)' }}
-                      className="absolute w-11 h-11 rounded-full flex flex-col items-center justify-center border-2 border-gold bg-gold/20 cursor-grab active:cursor-grabbing"
+                      className="absolute w-14 h-14 rounded-full flex flex-col items-center justify-center border-2 border-gold bg-gold/20 cursor-grab active:cursor-grabbing"
                       onPointerDown={(e) => handleSlotPointerDown(e, slot)}
                     >
                       <span className="text-[9px] text-white font-semibold leading-tight text-center px-0.5">
@@ -352,22 +368,25 @@ export function FormationCanvas({ teamId, formationId }: Props) {
                         onDragStart={(e) => handleSlotDragStart(e, slot)}
                         onDragEnd={handleDragEnd}
                         className={cn(
-                          'w-11 h-11 rounded-full flex flex-col items-center justify-center cursor-grab active:cursor-grabbing select-none text-center',
+                          'w-14 h-14 rounded-full flex flex-col items-center justify-center cursor-grab active:cursor-grabbing select-none text-center',
                           isOver ? 'bg-gold border-2 border-gold' : 'bg-navy-700 border-2 border-blue-500',
                           draggingFromSlotId === slot.id && 'opacity-40'
                         )}
                       >
-                        <span className="text-[9px] text-white font-semibold leading-tight truncate w-10 text-center px-0.5">
-                          {truncate(player.name.split(' ').pop() ?? player.name)}
+                        <span className="text-[8px] text-white font-semibold leading-tight text-center px-0.5">
+                          {truncatePart(player.name.split(' ')[0] ?? player.name)}
+                        </span>
+                        <span className="text-[8px] text-white font-semibold leading-tight text-center px-0.5">
+                          {truncatePart(player.name.split(' ').slice(1).join(' '))}
                         </span>
                         {player.jersey_number && (
-                          <span className="text-[8px] text-blue-300 leading-tight">#{player.jersey_number}</span>
+                          <span className="text-[7px] text-blue-300 leading-tight">#{player.jersey_number}</span>
                         )}
                       </div>
                     ) : (
                       <div
                         className={cn(
-                          'w-11 h-11 rounded-full flex items-center justify-center border-2 border-dashed select-none',
+                          'w-14 h-14 rounded-full flex items-center justify-center border-2 border-dashed select-none',
                           isOver ? 'border-gold bg-gold/20' : 'border-white/20 bg-white/5'
                         )}
                       >
@@ -409,7 +428,8 @@ export function FormationCanvas({ teamId, formationId }: Props) {
                     >
                       {player ? (
                         <>
-                          <div className="text-white font-medium truncate">{player.name.split(' ').pop()}</div>
+                          <div className="text-white font-medium truncate">{player.name.split(' ')[0]}</div>
+                          <div className="text-white font-medium truncate">{player.name.split(' ').slice(1).join(' ')}</div>
                           {player.jersey_number && <div className="text-[9px] text-muted">#{player.jersey_number}</div>}
                         </>
                       ) : (
