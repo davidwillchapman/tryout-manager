@@ -248,6 +248,24 @@ router.put('/:id', validateBody(playerSchema), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.delete('/bulk', async (req, res, next) => {
+  try {
+    const { ids } = req.body as { ids: unknown };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      res.status(400).json({ error: 'ids must be a non-empty array' });
+      return;
+    }
+    const numIds = (ids as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n > 0);
+    if (numIds.length !== ids.length) {
+      res.status(400).json({ error: 'ids must be an array of positive integers' });
+      return;
+    }
+    const placeholders = numIds.map(() => '?').join(', ');
+    await db.execute({ sql: `DELETE FROM players WHERE id IN (${placeholders})`, args: numIds });
+    res.status(204).send();
+  } catch (err) { next(err); }
+});
+
 router.delete('/:id', async (req, res, next) => {
   try {
     const existing = await db.execute({ sql: 'SELECT id FROM players WHERE id = ?', args: [req.params.id] });

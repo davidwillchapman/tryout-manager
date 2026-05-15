@@ -1,11 +1,12 @@
-import { useRef, useState } from "react";
-import { Download, Plus, Search, Upload, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Download, Plus, Search, Trash2, Upload, X } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Select, SelectItem } from "../components/ui/Select";
 import { PlayerRow } from "../components/players/PlayerRow";
 import { PlayerModal } from "../components/players/PlayerModal";
-import { usePlayers, useImportPlayers, type ImportResult } from "../api/players";
+import { usePlayers, useImportPlayers, useBulkDeletePlayers, type ImportResult } from "../api/players";
+import { Dialog, DialogContent, DialogClose } from "../components/ui/Dialog";
 import { useGroups } from "../api/groups";
 import { useDebounce } from "../hooks/useDebounce";
 import { POSITIONS } from "../lib/positions";
@@ -19,11 +20,15 @@ export function PlayersPage() {
   const [editingPlayer, setEditingPlayer] = useState<Player | undefined>();
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   const debouncedSearch = useDebounce(search, 300);
   const { data: groups = [] } = useGroups();
   const importPlayers = useImportPlayers();
+  const bulkDeletePlayers = useBulkDeletePlayers();
 
   const { data: rawPlayers = [], isLoading } = usePlayers({
     search: debouncedSearch || undefined,
@@ -40,6 +45,43 @@ export function PlayersPage() {
     if (ai !== bi) return ai - bi;
     return a.name.localeCompare(b.name);
   });
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [debouncedSearch, positionFilter, groupFilter]);
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate =
+        selectedIds.size > 0 && selectedIds.size < players.length;
+    }
+  }, [selectedIds.size, players.length]);
+
+  const handleTogglePlayer = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleToggleAll = () => {
+    if (selectedIds.size === players.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(players.map((p) => p.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    bulkDeletePlayers.mutate([...selectedIds], {
+      onSuccess: () => {
+        setSelectedIds(new Set());
+        setShowBulkDeleteConfirm(false);
+      },
+    });
+  };
 
   const handleEdit = (player: Player) => {
     setEditingPlayer(player);
@@ -244,6 +286,30 @@ export function PlayersPage() {
         </div>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="mb-3 flex items-center gap-3 px-4 py-2.5 rounded-lg bg-navy-800 border border-navy-600">
+          <button
+            type="button"
+            onClick={() => setSelectedIds(new Set())}
+            className="text-muted hover:text-white"
+            aria-label="Clear selection"
+          >
+            <X size={14} />
+          </button>
+          <span className="text-sm text-muted flex-1">
+            {selectedIds.size} player{selectedIds.size !== 1 ? "s" : ""} selected
+          </span>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => setShowBulkDeleteConfirm(true)}
+          >
+            <Trash2 size={14} />
+            Delete Selected
+          </Button>
+        </div>
+      )}
+
       <div className="rounded-lg border border-navy-600 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-muted">Loading...</div>
@@ -259,6 +325,16 @@ export function PlayersPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-navy-600 bg-navy-900">
+                <th className="px-4 py-3 w-10">
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    checked={players.length > 0 && selectedIds.size === players.length}
+                    onChange={handleToggleAll}
+                    className="accent-gold cursor-pointer"
+                    aria-label="Select all players"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                   Name
                 </th>
@@ -283,6 +359,8 @@ export function PlayersPage() {
                   key={player.id}
                   player={player}
                   onEdit={handleEdit}
+                  isSelected={selectedIds.has(player.id)}
+                  onToggle={handleTogglePlayer}
                 />
               ))}
             </tbody>
@@ -298,6 +376,26 @@ export function PlayersPage() {
         }}
         player={editingPlayer}
       />
+
+      <Dialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <DialogContent
+          title={`Delete ${selectedIds.size} player${selectedIds.size !== 1 ? "s" : ""}?`}
+          description="This will permanently delete the selected players. This cannot be undone."
+        >
+          <div className="flex justify-end gap-2 mt-4">
+            <DialogClose asChild>
+              <Button variant="ghost">Cancel</Button>
+            </DialogClose>
+            <Button
+              variant="danger"
+              onClick={handleBulkDelete}
+              disabled={bulkDeletePlayers.isPending}
+            >
+              {bulkDeletePlayers.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

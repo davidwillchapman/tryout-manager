@@ -10,15 +10,26 @@ import type { Player } from '../../types';
 interface PlayerRowProps {
   player: Player;
   onEdit: (player: Player) => void;
+  isSelected: boolean;
+  onToggle: (id: number) => void;
 }
 
-export function PlayerRow({ player, onEdit }: PlayerRowProps) {
+export function PlayerRow({ player, onEdit, isSelected, onToggle }: PlayerRowProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const deletePlayer = useDeletePlayer();
 
   return (
     <>
       <tr className="border-b border-navy-700 hover:bg-navy-800/50 transition-colors">
+        <td className="px-4 py-3 w-10">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggle(player.id)}
+            className="accent-gold cursor-pointer"
+            aria-label={`Select ${player.name}`}
+          />
+        </td>
         <td className="px-4 py-3 text-sm font-medium text-white">{player.name}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-1.5">

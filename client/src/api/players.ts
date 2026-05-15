@@ -73,6 +73,19 @@ export function useDeletePlayer() {
   });
 }
 
+export function useBulkDeletePlayers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      apiFetch<void>('/players/bulk', { method: 'DELETE', body: JSON.stringify({ ids }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: playerKeys.all });
+      qc.invalidateQueries({ queryKey: ['teams'] });
+      qc.invalidateQueries({ queryKey: ['groups'] });
+    },
+  });
+}
+
 export function useAssignPlayerGroup() {
   const qc = useQueryClient();
   return useMutation({
