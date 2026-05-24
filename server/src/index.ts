@@ -1,6 +1,8 @@
+import dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 import express from 'express';
 import cors from 'cors';
-import path from 'path';
 import { initDb } from './db';
 import groupsRouter from './routes/groups';
 import teamsRouter from './routes/teams';
@@ -13,7 +15,7 @@ import squadRouter from './routes/squad';
 import errorHandler from './middleware/errorHandler';
 
 const app = express();
-const PORT = process.env.PORT ?? 3001;
+const PORT = process.env.SERVER_PORT ?? 3001;
 
 app.use(cors());
 app.use(express.json());
