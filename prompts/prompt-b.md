@@ -1,4 +1,8 @@
-Create implementation-plan-eleven.md in the prompts directory.
+Create the following files in the prompts directory:
+
+- implementation-plan-17.md
+- implementation-plan-18.md
+- implementation-plan-19.md
 
 Create an implementation plan to handle the following feature creation or adjustment.
 

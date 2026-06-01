@@ -172,6 +172,46 @@ export function useDeleteProgression() {
   });
 }
 
+// ─── Bulk export / import ─────────────────────────────────────────────────────
+export async function exportActivitiesJson(): Promise<void> {
+  const res = await fetch('/api/activities/export');
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'activities.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export interface BulkImportResult {
+  imported: number;
+  errors: Array<{ title: string; message: string }>;
+  tag_warnings: string[];
+}
+
+export function useImportActivitiesBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (json: string): Promise<BulkImportResult> => {
+      const res = await fetch('/api/activities/import-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: json,
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      return res.json();
+    },
+    onSuccess: (result) => {
+      if (result.imported > 0) qc.invalidateQueries({ queryKey: activityKeys.all });
+    },
+  });
+}
+
 // ─── Image upload ─────────────────────────────────────────────────────────────
 export function useUploadImage() {
   return useMutation({

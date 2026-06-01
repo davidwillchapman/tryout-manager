@@ -214,6 +214,183 @@ router.post('/import', textUpload.single('file'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ─── Export all activities as JSON ───────────────────────────────────────────
+router.get('/export', async (_req, res, next) => {
+  try {
+    const activitiesResult = await db.execute('SELECT * FROM activities ORDER BY title ASC');
+    const rows = activitiesResult.rows as Record<string, unknown>[];
+
+    const exported = [];
+    for (const a of rows) {
+      const id = a.id as InValue;
+
+      const tagsResult = await db.execute({
+        sql: `SELECT f.name as framework_name, phase.title as phase_title,
+                prin.title as principle_title, sub.title as sub_principle_title
+              FROM activity_framework_tags aft
+              JOIN frameworks f ON f.id = aft.framework_id
+              LEFT JOIN framework_sections phase ON phase.id = aft.phase_section_id
+              LEFT JOIN framework_sections prin ON prin.id = aft.principle_section_id
+              LEFT JOIN framework_sections sub ON sub.id = aft.sub_principle_section_id
+              WHERE aft.activity_id = ? ORDER BY aft.id ASC`,
+        args: [id],
+      });
+
+      const refsResult = await db.execute({
+        sql: 'SELECT url, label FROM activity_references WHERE activity_id = ? ORDER BY order_index ASC, id ASC',
+        args: [id],
+      });
+
+      const progsResult = await db.execute({
+        sql: `SELECT a2.title FROM activity_progressions ap
+              JOIN activities a2 ON a2.id = ap.progression_activity_id
+              WHERE ap.activity_id = ? ORDER BY ap.id ASC`,
+        args: [id],
+      });
+
+      exported.push({
+        title: a.title,
+        summary: a.summary,
+        description: a.description,
+        activity_type: a.activity_type,
+        duration_minutes: a.duration_minutes,
+        field_setup: a.field_setup,
+        coaching_points: a.coaching_points,
+        flexibility_notes: a.flexibility_notes,
+        video_url: a.video_url,
+        video_type: a.video_type,
+        tags: tagsResult.rows.map((t) => {
+          const r = t as Record<string, unknown>;
+          return { framework_name: r.framework_name, phase_title: r.phase_title, principle_title: r.principle_title, sub_principle_title: r.sub_principle_title };
+        }),
+        references: refsResult.rows.map((r) => {
+          const ref = r as Record<string, unknown>;
+          return { url: ref.url, label: ref.label };
+        }),
+        progression_titles: progsResult.rows.map((p) => (p as Record<string, unknown>).title),
+      });
+    }
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename="activities.json"');
+    res.json({ version: 1, exported_at: new Date().toISOString(), activities: exported });
+  } catch (err) { next(err); }
+});
+
+// ─── Bulk import from JSON export ─────────────────────────────────────────────
+router.post('/import-bulk', async (req, res, next) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    if (!body || !Array.isArray(body.activities)) {
+      res.status(400).json({ error: 'Invalid format: expected { activities: [...] }' });
+      return;
+    }
+
+    const incoming = body.activities as Record<string, unknown>[];
+    const errors: Array<{ title: string; message: string }> = [];
+    const tagWarnings: string[] = [];
+
+    // First pass: insert all activity rows, build title → new id map.
+    const titleToId = new Map<string, number>();
+    const inserted: Array<{
+      id: number;
+      tags: Record<string, unknown>[];
+      references: Record<string, unknown>[];
+      progression_titles: string[];
+    }> = [];
+
+    for (const a of incoming) {
+      const title = String(a.title ?? '').trim();
+      if (!title || !a.summary || !a.description) {
+        errors.push({ title: title || '(no title)', message: 'Missing required fields (title, summary, description)' });
+        continue;
+      }
+      try {
+        const ins = await db.execute({
+          sql: 'INSERT INTO activities (title, summary, description, activity_type, duration_minutes, field_setup, coaching_points, flexibility_notes, video_url, video_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          args: [title, a.summary as InValue, a.description as InValue, (a.activity_type ?? null) as InValue, (a.duration_minutes ?? null) as InValue, (a.field_setup ?? null) as InValue, (a.coaching_points ?? null) as InValue, (a.flexibility_notes ?? null) as InValue, (a.video_url ?? null) as InValue, (a.video_type ?? null) as InValue],
+        });
+        const newId = Number(ins.lastInsertRowid!);
+        titleToId.set(title, newId);
+        inserted.push({
+          id: newId,
+          tags: Array.isArray(a.tags) ? (a.tags as Record<string, unknown>[]) : [],
+          references: Array.isArray(a.references) ? (a.references as Record<string, unknown>[]) : [],
+          progression_titles: Array.isArray(a.progression_titles) ? (a.progression_titles as string[]) : [],
+        });
+      } catch (e) {
+        errors.push({ title, message: e instanceof Error ? e.message : 'Insert failed' });
+      }
+    }
+
+    // Second pass: tags, references, progressions.
+    for (const { id, tags, references, progression_titles } of inserted) {
+      for (const tag of tags) {
+        const fwResult = await db.execute({
+          sql: 'SELECT id FROM frameworks WHERE LOWER(name) = LOWER(?)',
+          args: [String(tag.framework_name ?? '')],
+        });
+        if (!fwResult.rows[0]) {
+          tagWarnings.push(`Framework not found: "${tag.framework_name}" — tag skipped`);
+          continue;
+        }
+        const frameworkId = fwResult.rows[0].id as number;
+
+        let phaseId: number | null = null;
+        let principleId: number | null = null;
+        let subId: number | null = null;
+
+        if (tag.phase_title) {
+          const r = await db.execute({
+            sql: 'SELECT id FROM framework_sections WHERE framework_id = ? AND parent_id IS NULL AND LOWER(title) = LOWER(?)',
+            args: [frameworkId, String(tag.phase_title)],
+          });
+          if (r.rows[0]) phaseId = r.rows[0].id as number;
+        }
+        if (tag.principle_title && phaseId !== null) {
+          const r = await db.execute({
+            sql: 'SELECT id FROM framework_sections WHERE framework_id = ? AND parent_id = ? AND LOWER(title) = LOWER(?)',
+            args: [frameworkId, phaseId, String(tag.principle_title)],
+          });
+          if (r.rows[0]) principleId = r.rows[0].id as number;
+        }
+        if (tag.sub_principle_title && principleId !== null) {
+          const r = await db.execute({
+            sql: 'SELECT id FROM framework_sections WHERE framework_id = ? AND parent_id = ? AND LOWER(title) = LOWER(?)',
+            args: [frameworkId, principleId, String(tag.sub_principle_title)],
+          });
+          if (r.rows[0]) subId = r.rows[0].id as number;
+        }
+
+        await db.execute({
+          sql: 'INSERT INTO activity_framework_tags (activity_id, framework_id, phase_section_id, principle_section_id, sub_principle_section_id) VALUES (?, ?, ?, ?, ?)',
+          args: [id, frameworkId, phaseId, principleId, subId],
+        });
+      }
+
+      for (let i = 0; i < references.length; i++) {
+        const ref = references[i];
+        await db.execute({
+          sql: 'INSERT INTO activity_references (activity_id, url, label, order_index) VALUES (?, ?, ?, ?)',
+          args: [id, String(ref.url ?? ''), (ref.label ?? null) as InValue, i],
+        });
+      }
+
+      for (const ptitle of progression_titles) {
+        const targetId = titleToId.get(String(ptitle));
+        if (targetId) {
+          await db.execute({
+            sql: 'INSERT OR IGNORE INTO activity_progressions (activity_id, progression_activity_id) VALUES (?, ?)',
+            args: [id, targetId],
+          }).catch(() => {});
+        }
+      }
+    }
+
+    res.json({ imported: inserted.length, errors, tag_warnings: tagWarnings });
+  } catch (err) { next(err); }
+});
+
 // ─── Get activity detail ──────────────────────────────────────────────────────
 router.get('/:id', async (req, res, next) => {
   try {

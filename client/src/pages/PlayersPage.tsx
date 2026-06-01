@@ -5,7 +5,7 @@ import { Input } from "../components/ui/Input";
 import { Select, SelectItem } from "../components/ui/Select";
 import { PlayerRow } from "../components/players/PlayerRow";
 import { PlayerModal } from "../components/players/PlayerModal";
-import { usePlayers, useImportPlayers, useBulkDeletePlayers, type ImportResult } from "../api/players";
+import { usePlayers, useImportPlayers, useBulkDeletePlayers, exportPlayersCsv, type ImportResult } from "../api/players";
 import { Dialog, DialogContent, DialogClose } from "../components/ui/Dialog";
 import { useGroups } from "../api/groups";
 import { useDebounce } from "../hooks/useDebounce";
@@ -22,6 +22,7 @@ export function PlayersPage() {
   const [importError, setImportError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
 
@@ -91,6 +92,15 @@ export function PlayersPage() {
   const handleAdd = () => {
     setEditingPlayer(undefined);
     setModalOpen(true);
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await exportPlayersCsv();
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleDownloadTemplate = () => {
@@ -175,6 +185,15 @@ export function PlayersPage() {
           >
             <Download size={16} />
             Template
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={handleExport}
+            disabled={isExporting}
+            title="Export all players to CSV"
+          >
+            <Download size={16} />
+            {isExporting ? "Exporting..." : "Export CSV"}
           </Button>
           <Button
             variant="outline"

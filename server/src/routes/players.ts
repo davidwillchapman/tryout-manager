@@ -198,6 +198,27 @@ router.post('/import', text({ type: ['text/csv', 'text/plain'], limit: '5mb' }),
   } catch (err) { next(err); }
 });
 
+router.get('/export', async (req, res, next) => {
+  try {
+    const result = await db.execute(`${baseSelect} ORDER BY p.name`);
+    const header = ['name', 'primary_position', 'secondary_position', 'prior_team', 'prior_team_division', 'notes', 'group', 'team'];
+    const escape = (v: unknown): string => {
+      const s = v == null ? '' : String(v);
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [
+      header.join(','),
+      ...result.rows.map((p) =>
+        [p.name, p.primary_position, p.secondary_position, p.prior_team, p.prior_team_division, p.notes, p.group_name, p.team_name]
+          .map(escape).join(',')
+      ),
+    ];
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="players.csv"');
+    res.send(lines.join('\n'));
+  } catch (err) { next(err); }
+});
+
 router.get('/:id', async (req, res, next) => {
   try {
     const result = await db.execute({ sql: `${baseSelect} WHERE p.id = ?`, args: [req.params.id] });
