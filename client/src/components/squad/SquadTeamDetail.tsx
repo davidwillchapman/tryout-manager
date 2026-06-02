@@ -5,6 +5,8 @@ import { Input } from '../ui/Input';
 import { Dialog, DialogContent } from '../ui/Dialog';
 import { RosterTab } from './RosterTab';
 import { FormationsTab } from './FormationsTab';
+import { PeriodizationPlanTab } from './PeriodizationPlanTab';
+import { TrainingScheduleTab } from './TrainingScheduleTab';
 import {
   useSquadTeam,
   useUpdateSquadTeam,
@@ -13,7 +15,7 @@ import {
 } from '../../api/squad';
 import { cn } from '../../lib/utils';
 
-type Tab = 'roster' | 'formations';
+type Tab = 'roster' | 'formations' | 'periodization' | 'schedule';
 
 interface Props {
   teamId: number;
@@ -137,7 +139,7 @@ export function SquadTeamDetail({ teamId, onDeleted }: Props) {
 
         {/* Tabs */}
         <div className="flex gap-1 mt-3 border-b border-navy-700 -mb-[1px]">
-          {([['roster', 'Roster'], ['formations', 'Formations']] as [Tab, string][]).map(([tab, label]) => (
+          {([['roster', 'Roster'], ['formations', 'Formations'], ['periodization', 'Periodization Plan'], ['schedule', 'Training Schedule']] as [Tab, string][]).map(([tab, label]) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -158,6 +160,8 @@ export function SquadTeamDetail({ teamId, onDeleted }: Props) {
       <div className="flex-1 overflow-hidden">
         {activeTab === 'roster' && <RosterTab teamId={teamId} />}
         {activeTab === 'formations' && <FormationsTab teamId={teamId} />}
+        {activeTab === 'periodization' && <PeriodizationPlanTab teamId={teamId} />}
+        {activeTab === 'schedule' && <TrainingScheduleTab teamId={teamId} />}
       </div>
 
       {/* Edit dialog */}

@@ -12,6 +12,8 @@ import frameworksRouter from './routes/frameworks';
 import activitiesRouter from './routes/activities';
 import sessionsRouter from './routes/sessions';
 import squadRouter from './routes/squad';
+import periodizationRouter from './routes/periodization';
+import scheduledSessionsRouter from './routes/scheduledSessions';
 import errorHandler from './middleware/errorHandler';
 
 const app = express();
@@ -32,6 +34,8 @@ app.use('/api/frameworks', frameworksRouter);
 app.use('/api/activities', activitiesRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/squad', squadRouter);
+app.use('/api/periodization', periodizationRouter);
+app.use('/api/scheduled-sessions', scheduledSessionsRouter);
 app.use('/images', express.static(path.resolve(__dirname, '../../data/images')));
 app.use('/videos', express.static(path.resolve(__dirname, '../../data/videos')));
 

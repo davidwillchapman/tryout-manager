@@ -257,6 +257,65 @@ export async function initDb(): Promise<void> {
     );
   `);
 
+  await db.executeMultiple(`
+    CREATE TABLE IF NOT EXISTS periodization_plans (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      squad_team_id INTEGER NOT NULL UNIQUE REFERENCES squad_teams(id) ON DELETE CASCADE,
+      content       TEXT NOT NULL DEFAULT '',
+      created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS scheduled_sessions (
+      id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+      squad_team_id      INTEGER NOT NULL REFERENCES squad_teams(id) ON DELETE CASCADE,
+      source_session_id  INTEGER REFERENCES session_plans(id) ON DELETE SET NULL,
+      date               TEXT NOT NULL,
+      title              TEXT NOT NULL,
+      game_phase         TEXT NOT NULL,
+      overall_objective  TEXT NOT NULL,
+      main_principle     TEXT,
+      sub_principle_1    TEXT,
+      sub_principle_2    TEXT,
+      evaluation_status  TEXT NOT NULL DEFAULT 'not_started',
+      overall_rating     INTEGER,
+      evaluation_notes   TEXT,
+      created_at         TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS scheduled_session_activities (
+      id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+      scheduled_session_id  INTEGER NOT NULL REFERENCES scheduled_sessions(id) ON DELETE CASCADE,
+      source_activity_id    INTEGER REFERENCES activities(id) ON DELETE SET NULL,
+      order_index           INTEGER NOT NULL,
+      title                 TEXT NOT NULL,
+      summary               TEXT,
+      description           TEXT,
+      activity_type         TEXT,
+      duration_minutes      INTEGER,
+      field_setup           TEXT,
+      coaching_points       TEXT,
+      flexibility_notes     TEXT,
+      image_id              INTEGER REFERENCES activity_images(id) ON DELETE SET NULL,
+      video_url             TEXT,
+      video_type            TEXT,
+      rating                INTEGER,
+      notes                 TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS scheduled_session_players (
+      id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+      scheduled_session_id  INTEGER NOT NULL REFERENCES scheduled_sessions(id) ON DELETE CASCADE,
+      squad_player_id       INTEGER REFERENCES squad_players(id) ON DELETE SET NULL,
+      name                  TEXT NOT NULL,
+      is_guest              INTEGER NOT NULL DEFAULT 0,
+      attendance            TEXT,
+      eval_mark             TEXT,
+      created_at            TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
   // Seed built-in formation templates if none exist
   const templateCount = await db.execute('SELECT COUNT(*) as n FROM formation_templates');
   const n = (templateCount.rows[0] as Record<string, unknown>).n as number;

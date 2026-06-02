@@ -275,3 +275,69 @@ export interface FormationTemplate {
   created_at: string;
   updated_at: string;
 }
+
+export type AttendanceStatus = 'attended' | 'excused' | 'unexcused';
+export type EvaluationStatus = 'not_started' | 'in_progress' | 'complete';
+export type EvalMark = 'top' | 'bottom';
+
+export interface PeriodizationPlan {
+  id?: number;
+  squad_team_id: number;
+  content: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ScheduledSessionSummary {
+  id: number;
+  date: string;
+  title: string;
+  game_phase: GamePhase;
+  overall_objective: string;
+  evaluation_status: EvaluationStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScheduledSessionActivity {
+  id: number;
+  scheduled_session_id: number;
+  source_activity_id: number | null;
+  order_index: number;
+  title: string;
+  summary: string | null;
+  description: string | null;
+  activity_type: string | null;
+  duration_minutes: number | null;
+  field_setup: string | null;
+  coaching_points: string | null;
+  flexibility_notes: string | null;
+  image_id: number | null;
+  video_url: string | null;
+  video_type: 'youtube' | 'vimeo' | 'upload' | null;
+  rating: number | null;
+  notes: string | null;
+}
+
+export interface ScheduledSessionPlayer {
+  id: number;
+  scheduled_session_id: number;
+  squad_player_id: number | null;
+  name: string;
+  is_guest: number;
+  attendance: AttendanceStatus | null;
+  eval_mark: EvalMark | null;
+  created_at: string;
+}
+
+export interface ScheduledSession extends ScheduledSessionSummary {
+  squad_team_id: number;
+  source_session_id: number | null;
+  main_principle: string | null;
+  sub_principle_1: string | null;
+  sub_principle_2: string | null;
+  overall_rating: number | null;
+  evaluation_notes: string | null;
+  activities: ScheduledSessionActivity[];
+  players: ScheduledSessionPlayer[];
+}
