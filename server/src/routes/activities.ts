@@ -280,13 +280,16 @@ router.get('/export', async (_req, res, next) => {
 // ─── Bulk import from JSON export ─────────────────────────────────────────────
 router.post('/import-bulk', async (req, res, next) => {
   try {
-    const body = req.body as Record<string, unknown>;
-    if (!body || !Array.isArray(body.activities)) {
-      res.status(400).json({ error: 'Invalid format: expected { activities: [...] }' });
+    const body = req.body;
+    let incoming: Record<string, unknown>[];
+    if (Array.isArray(body)) {
+      incoming = body as Record<string, unknown>[];
+    } else if (body && Array.isArray((body as Record<string, unknown>).activities)) {
+      incoming = (body as Record<string, unknown>).activities as Record<string, unknown>[];
+    } else {
+      res.status(400).json({ error: 'Invalid format: expected an array or { activities: [...] }' });
       return;
     }
-
-    const incoming = body.activities as Record<string, unknown>[];
     const errors: Array<{ title: string; message: string }> = [];
     const tagWarnings: string[] = [];
 

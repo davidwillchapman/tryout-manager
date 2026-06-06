@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Download, Dumbbell, Plus, Upload, X } from 'lucide-react';
+import { useState } from 'react';
+import { Download, Dumbbell, Plus, Upload } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Dialog, DialogContent } from '../components/ui/Dialog';
 import { ActivityList } from '../components/activities/ActivityList';
@@ -9,7 +9,7 @@ import { ImportActivityModal } from '../components/activities/ImportActivityModa
 import { SessionList } from '../components/sessions/SessionList';
 import { SessionDetail } from '../components/sessions/SessionDetail';
 import { SessionForm } from '../components/sessions/SessionForm';
-import { useCreateActivity, exportActivitiesJson, useImportActivitiesBulk, type BulkImportResult } from '../api/activities';
+import { useCreateActivity, exportActivitiesJson } from '../api/activities';
 import { useCreateSession } from '../api/sessions';
 
 type Mode = 'activities' | 'sessions';
@@ -22,31 +22,12 @@ export function PlaymakerPage({ defaultMode }: { defaultMode: Mode }) {
   const [newSessionOpen, setNewSessionOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [bulkImportResult, setBulkImportResult] = useState<BulkImportResult | null>(null);
-  const [bulkImportError, setBulkImportError] = useState<string | null>(null);
-  const bulkFileRef = useRef<HTMLInputElement>(null);
   const createActivity = useCreateActivity();
   const createSession = useCreateSession();
-  const importBulk = useImportActivitiesBulk();
 
   const handleExport = async () => {
     setIsExporting(true);
     try { await exportActivitiesJson(); } finally { setIsExporting(false); }
-  };
-
-  const handleBulkFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    setBulkImportResult(null);
-    setBulkImportError(null);
-    try {
-      const text = await file.text();
-      const result = await importBulk.mutateAsync(text);
-      setBulkImportResult(result);
-    } catch (err) {
-      setBulkImportError(err instanceof Error ? err.message : 'Import failed');
-    }
   };
 
   return (
@@ -61,74 +42,32 @@ export function PlaymakerPage({ defaultMode }: { defaultMode: Mode }) {
 
           {mode === 'activities' ? (
             <>
-              <input
-                ref={bulkFileRef}
-                type="file"
-                accept=".json,application/json"
-                className="hidden"
-                onChange={handleBulkFileChange}
-              />
               <div className="flex gap-2 mb-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="flex-1 text-xs"
+                  onClick={() => setImportOpen(true)}
+                >
+                  <Upload size={12} /> Import
+                </Button>
                 <Button
                   size="sm"
                   variant="ghost"
                   className="flex-1 text-xs"
                   onClick={handleExport}
                   disabled={isExporting}
-                  title="Export all activities to JSON"
                 >
                   <Download size={12} /> {isExporting ? 'Exporting…' : 'Export'}
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="flex-1 text-xs"
-                  onClick={() => bulkFileRef.current?.click()}
-                  disabled={importBulk.isPending}
-                  title="Import activities from JSON export"
-                >
-                  <Upload size={12} /> {importBulk.isPending ? 'Importing…' : 'Import All'}
-                </Button>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 text-xs"
-                  onClick={() => setImportOpen(true)}
-                >
-                  <Upload size={12} /> Import .md
-                </Button>
-                <Button
-                  size="sm"
-                  className="flex-1 text-xs"
-                  onClick={() => setNewActivityOpen(true)}
-                >
-                  <Plus size={12} /> New
-                </Button>
-              </div>
-              {(bulkImportResult || bulkImportError) && (
-                <div className={`mt-2 rounded p-2 text-xs flex items-start gap-2 ${bulkImportError ? 'bg-red-950/40 text-red-300 border border-red-700' : (bulkImportResult?.errors.length ?? 0) > 0 ? 'bg-yellow-950/30 text-yellow-200 border border-yellow-700' : 'bg-navy-800 text-white border border-navy-600'}`}>
-                  <div className="flex-1">
-                    {bulkImportError ? (
-                      <p>Import failed: {bulkImportError}</p>
-                    ) : bulkImportResult ? (
-                      <>
-                        <p>Imported {bulkImportResult.imported} activit{bulkImportResult.imported !== 1 ? 'ies' : 'y'}{bulkImportResult.errors.length > 0 ? `, ${bulkImportResult.errors.length} skipped` : ''}.</p>
-                        {bulkImportResult.tag_warnings.length > 0 && (
-                          <ul className="mt-1 list-disc list-inside space-y-0.5 text-yellow-300">
-                            {bulkImportResult.tag_warnings.slice(0, 5).map((w, i) => <li key={i}>{w}</li>)}
-                            {bulkImportResult.tag_warnings.length > 5 && <li>…and {bulkImportResult.tag_warnings.length - 5} more</li>}
-                          </ul>
-                        )}
-                      </>
-                    ) : null}
-                  </div>
-                  <button type="button" onClick={() => { setBulkImportResult(null); setBulkImportError(null); }} className="text-muted hover:text-white shrink-0">
-                    <X size={12} />
-                  </button>
-                </div>
-              )}
+              <Button
+                size="sm"
+                className="w-full text-xs"
+                onClick={() => setNewActivityOpen(true)}
+              >
+                <Plus size={12} /> New
+              </Button>
             </>
           ) : (
             <Button

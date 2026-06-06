@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Edit2, Trash2, Copy, Plus, ExternalLink, X, Clock, Tag as TagIcon } from 'lucide-react';
+import { Edit2, Trash2, Copy, Plus, ExternalLink, X, Clock, Tag as TagIcon, ImageIcon, Upload } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { Dialog, DialogContent } from '../ui/Dialog';
@@ -18,6 +18,7 @@ import {
   useUpdateReference,
   useDeleteReference,
   useDeleteProgression,
+  useUploadImage,
 } from '../../api/activities';
 import type { ActivityDetail as ActivityDetailType, ActivityReference } from '../../types';
 
@@ -33,6 +34,8 @@ export function ActivityDetail({ activityId, onDeleted, onCloned, onProgressionC
   const updateActivity = useUpdateActivity();
   const deleteActivity = useDeleteActivity();
   const cloneActivity = useCloneActivity();
+  const uploadImage = useUploadImage();
+  const imageRef = useRef<HTMLInputElement>(null);
 
   const [editOpen, setEditOpen] = useState(false);
   const [tagFormOpen, setTagFormOpen] = useState(false);
@@ -50,6 +53,26 @@ export function ActivityDetail({ activityId, onDeleted, onCloned, onProgressionC
 
   const handleClone = () => {
     cloneActivity.mutate(activity.id, { onSuccess: (a) => onCloned(a.id) });
+  };
+
+  const baseFields = {
+    title: activity.title, summary: activity.summary, description: activity.description,
+    activity_type: activity.activity_type, duration_minutes: activity.duration_minutes,
+    field_setup: activity.field_setup, coaching_points: activity.coaching_points,
+    flexibility_notes: activity.flexibility_notes, video_url: activity.video_url, video_type: activity.video_type,
+  };
+
+  const handleImageUpload = (file: File | null) => {
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('images', file);
+    uploadImage.mutate(fd, {
+      onSuccess: (img) => updateActivity.mutate({ id: activity.id, ...baseFields, image_id: img.id, image_url: img.url }),
+    });
+  };
+
+  const handleRemoveImage = () => {
+    updateActivity.mutate({ id: activity.id, ...baseFields, image_id: null, image_url: null });
   };
 
   return (
@@ -100,11 +123,52 @@ export function ActivityDetail({ activityId, onDeleted, onCloned, onProgressionC
         </Section>
 
         {/* Image */}
-        {activity.image_url && (
-          <Section label="Image">
-            <img src={activity.image_url} alt={activity.title} className="rounded max-h-64 object-contain" />
-          </Section>
-        )}
+        <Section
+          label="Image"
+          action={activity.image_url ? (
+            <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300" onClick={handleRemoveImage} disabled={updateActivity.isPending}>
+              <X size={12} /> Remove
+            </Button>
+          ) : undefined}
+        >
+          <input
+            ref={imageRef}
+            type="file"
+            accept=".jpg,.jpeg,.png,.gif,.webp,image/*"
+            className="hidden"
+            onChange={(e) => handleImageUpload(e.target.files?.[0] ?? null)}
+          />
+          {activity.image_url ? (
+            <div
+              className="relative inline-block group cursor-pointer"
+              onClick={() => imageRef.current?.click()}
+              title="Click to replace image"
+            >
+              <img src={activity.image_url} alt={activity.title} className="rounded max-h-64 object-contain border border-navy-700" />
+              <div className="absolute inset-0 bg-black/50 rounded opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                <Upload size={16} className="text-white" />
+                <span className="text-white text-xs font-medium">Replace</span>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="flex flex-col items-center justify-center border-2 border-dashed border-navy-600 rounded-lg p-5 cursor-pointer hover:border-gold transition-colors"
+              onClick={() => imageRef.current?.click()}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => { e.preventDefault(); handleImageUpload(e.dataTransfer.files[0] ?? null); }}
+            >
+              {uploadImage.isPending || updateActivity.isPending ? (
+                <p className="text-xs text-muted">Uploading…</p>
+              ) : (
+                <>
+                  <ImageIcon size={20} className="text-navy-600 mb-1" />
+                  <p className="text-xs text-muted">Drag & drop or click to add image</p>
+                </>
+              )}
+            </div>
+          )}
+          {uploadImage.isError && <p className="text-xs text-red-400 mt-1">{String((uploadImage.error as Error).message)}</p>}
+        </Section>
 
         {/* Video */}
         {activity.video_url && activity.video_type && (
