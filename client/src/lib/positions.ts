@@ -2,6 +2,7 @@ export const POSITIONS = [
   { value: 'GK',  label: 'Goalkeeper',    group: 'GK'  },
   { value: 'CB',  label: 'Center Back',   group: 'DEF' },
   { value: 'FB',  label: 'Full Back',     group: 'DEF' },
+  { value: 'WB',  label: 'Wing Back',    group: 'DEF' },
   { value: 'CDM', label: 'Defensive Mid', group: 'MID' },
   { value: 'CM',  label: 'Center Mid',    group: 'MID' },
   { value: 'CAM', label: 'Attacking Mid', group: 'MID' },

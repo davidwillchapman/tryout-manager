@@ -80,6 +80,7 @@ export function SquadAssistPage() {
             key={selectedTeamId}
             teamId={selectedTeamId}
             onDeleted={() => setSelectedTeamId(null)}
+            onCloned={(id) => setSelectedTeamId(id)}
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center px-8">

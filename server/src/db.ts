@@ -316,6 +316,17 @@ export async function initDb(): Promise<void> {
     );
   `);
 
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS squad_depth_chart_entries (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      squad_team_id   INTEGER NOT NULL REFERENCES squad_teams(id) ON DELETE CASCADE,
+      view_type       TEXT NOT NULL,
+      group_key       TEXT NOT NULL,
+      squad_player_id INTEGER NOT NULL REFERENCES squad_players(id) ON DELETE CASCADE,
+      rank            INTEGER NOT NULL DEFAULT 0
+    )
+  `).catch(() => {});
+
   // Seed built-in formation templates if none exist
   const templateCount = await db.execute('SELECT COUNT(*) as n FROM formation_templates');
   const n = (templateCount.rows[0] as Record<string, unknown>).n as number;

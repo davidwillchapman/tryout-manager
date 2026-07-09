@@ -104,6 +104,8 @@ const depthOrderSchema = z.array(z.object({
   depth_order: z.number().int(),
 }));
 
+const depthChartBodySchema = z.record(z.string(), z.array(z.number().int()));
+
 const formationSchema = z.object({
   name: z.string().min(1),
   template_id: z.number().int().optional(),
@@ -192,6 +194,62 @@ router.post('/teams/import/:sourceTeamId', async (req, res, next) => {
     }
 
     const row = await db.execute({ sql: 'SELECT * FROM squad_teams WHERE id = ?', args: [squadTeamId] });
+    const r = row.rows[0] as Record<string, unknown>;
+    res.status(201).json({ ...r, is_active: Boolean(r.is_active) });
+  } catch (err) { next(err); }
+});
+
+router.post('/teams/:teamId/clone', async (req, res, next) => {
+  try {
+    const existing = await db.execute({ sql: 'SELECT * FROM squad_teams WHERE id = ?', args: [req.params.teamId] });
+    if (!existing.rows[0]) { res.status(404).json({ error: 'Squad team not found' }); return; }
+    const src = existing.rows[0] as Record<string, unknown>;
+
+    const newTeamIns = await db.execute({
+      sql: 'INSERT INTO squad_teams (name, description, season_label) VALUES (?, ?, ?)',
+      args: [`${src.name as string} (Copy)`, src.description ?? null, src.season_label ?? null],
+    });
+    const newTeamId = newTeamIns.lastInsertRowid!;
+
+    const players = await db.execute({
+      sql: 'SELECT * FROM squad_players WHERE squad_team_id = ? ORDER BY depth_order ASC, id ASC',
+      args: [req.params.teamId],
+    });
+    const playerIdMap = new Map<number, number>();
+    for (const p of players.rows as Record<string, unknown>[]) {
+      const pIns = await db.execute({
+        sql: 'INSERT INTO squad_players (squad_team_id, source_player_id, name, primary_position, secondary_position, jersey_number, depth_order, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        args: [newTeamId, p.source_player_id ?? null, p.name, p.primary_position ?? null, p.secondary_position ?? null, p.jersey_number ?? null, p.depth_order ?? 0, p.status ?? 'active'],
+      });
+      playerIdMap.set(p.id as number, Number(pIns.lastInsertRowid!));
+    }
+
+    const formations = await db.execute({
+      sql: 'SELECT * FROM formations WHERE squad_team_id = ? ORDER BY created_at ASC',
+      args: [req.params.teamId],
+    });
+    for (const f of formations.rows as Record<string, unknown>[]) {
+      const fIns = await db.execute({
+        sql: 'INSERT INTO formations (squad_team_id, name, formation_code, is_default) VALUES (?, ?, ?, ?)',
+        args: [newTeamId, f.name, f.formation_code ?? '', f.is_default ?? 0],
+      });
+      const newFormationId = fIns.lastInsertRowid!;
+
+      const slots = await db.execute({
+        sql: 'SELECT * FROM formation_slots WHERE formation_id = ?',
+        args: [f.id as number],
+      });
+      for (const slot of slots.rows as Record<string, unknown>[]) {
+        const oldPlayerId = slot.squad_player_id as number | null;
+        const newPlayerId = oldPlayerId != null ? (playerIdMap.get(oldPlayerId) ?? null) : null;
+        await db.execute({
+          sql: 'INSERT INTO formation_slots (formation_id, slot_label, role, x_pct, y_pct, squad_player_id) VALUES (?, ?, ?, ?, ?, ?)',
+          args: [newFormationId, slot.slot_label, slot.role, slot.x_pct, slot.y_pct, newPlayerId],
+        });
+      }
+    }
+
+    const row = await db.execute({ sql: 'SELECT * FROM squad_teams WHERE id = ?', args: [newTeamId] });
     const r = row.rows[0] as Record<string, unknown>;
     res.status(201).json({ ...r, is_active: Boolean(r.is_active) });
   } catch (err) { next(err); }
@@ -308,6 +366,51 @@ router.patch('/teams/:teamId/players/:playerId/status', async (req, res, next) =
 router.delete('/teams/:teamId/players/:playerId', async (req, res, next) => {
   try {
     await db.execute({ sql: 'DELETE FROM squad_players WHERE id = ? AND squad_team_id = ?', args: [req.params.playerId, req.params.teamId] });
+    res.status(204).send();
+  } catch (err) { next(err); }
+});
+
+// ─── Depth Charts ────────────────────────────────────────────────────────────
+router.get('/teams/:teamId/depth-chart/:viewType', async (req, res, next) => {
+  try {
+    const { teamId, viewType } = req.params;
+    if (viewType !== 'positional' && viewType !== 'categorical') {
+      res.status(400).json({ error: 'Invalid view type' }); return;
+    }
+    const result = await db.execute({
+      sql: 'SELECT group_key, squad_player_id FROM squad_depth_chart_entries WHERE squad_team_id = ? AND view_type = ? ORDER BY rank ASC',
+      args: [teamId, viewType],
+    });
+    const assignments: Record<string, number[]> = {};
+    for (const row of result.rows as unknown as { group_key: string; squad_player_id: number }[]) {
+      if (!assignments[row.group_key]) assignments[row.group_key] = [];
+      assignments[row.group_key].push(Number(row.squad_player_id));
+    }
+    res.json(assignments);
+  } catch (err) { next(err); }
+});
+
+router.put('/teams/:teamId/depth-chart/:viewType', async (req, res, next) => {
+  try {
+    const { teamId, viewType } = req.params;
+    if (viewType !== 'positional' && viewType !== 'categorical') {
+      res.status(400).json({ error: 'Invalid view type' }); return;
+    }
+    const parsed = depthChartBodySchema.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: 'Invalid body' }); return; }
+
+    await db.execute({
+      sql: 'DELETE FROM squad_depth_chart_entries WHERE squad_team_id = ? AND view_type = ?',
+      args: [teamId, viewType],
+    });
+    for (const [groupKey, playerIds] of Object.entries(parsed.data)) {
+      for (let i = 0; i < playerIds.length; i++) {
+        await db.execute({
+          sql: 'INSERT INTO squad_depth_chart_entries (squad_team_id, view_type, group_key, squad_player_id, rank) VALUES (?, ?, ?, ?, ?)',
+          args: [teamId, viewType, groupKey, playerIds[i], i],
+        });
+      }
+    }
     res.status(204).send();
   } catch (err) { next(err); }
 });

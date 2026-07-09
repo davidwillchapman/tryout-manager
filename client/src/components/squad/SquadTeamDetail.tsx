@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Pencil, Trash2, Check, X } from 'lucide-react';
+import { Pencil, Trash2, Check, X, Copy } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Dialog, DialogContent } from '../ui/Dialog';
 import { RosterTab } from './RosterTab';
+import { DepthChartTab } from './DepthChartTab';
 import { FormationsTab } from './FormationsTab';
 import { PeriodizationPlanTab } from './PeriodizationPlanTab';
 import { TrainingScheduleTab } from './TrainingScheduleTab';
@@ -12,14 +13,16 @@ import {
   useUpdateSquadTeam,
   useToggleSquadTeamStatus,
   useDeleteSquadTeam,
+  useCloneSquadTeam,
 } from '../../api/squad';
 import { cn } from '../../lib/utils';
 
-type Tab = 'roster' | 'formations' | 'periodization' | 'schedule';
+type Tab = 'roster' | 'depth-chart' | 'formations' | 'periodization' | 'schedule';
 
 interface Props {
   teamId: number;
   onDeleted: () => void;
+  onCloned?: (newTeamId: number) => void;
 }
 
 interface EditFormProps {
@@ -69,10 +72,11 @@ function EditTeamDialog({ teamId, onClose }: EditFormProps) {
   );
 }
 
-export function SquadTeamDetail({ teamId, onDeleted }: Props) {
+export function SquadTeamDetail({ teamId, onDeleted, onCloned }: Props) {
   const { data: team } = useSquadTeam(teamId);
   const toggleStatus = useToggleSquadTeamStatus();
   const deleteTeam = useDeleteSquadTeam();
+  const cloneTeam = useCloneSquadTeam();
   const [activeTab, setActiveTab] = useState<Tab>('roster');
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -110,6 +114,14 @@ export function SquadTeamDetail({ teamId, onDeleted }: Props) {
               {team.is_active ? 'Deactivate' : 'Activate'}
             </button>
             <button
+              onClick={() => cloneTeam.mutate(teamId, { onSuccess: (t) => onCloned?.(t.id) })}
+              disabled={cloneTeam.isPending}
+              className="text-muted hover:text-white p-1 rounded transition-colors disabled:opacity-50"
+              title="Clone team"
+            >
+              <Copy size={14} />
+            </button>
+            <button
               onClick={() => setEditOpen(true)}
               className="text-muted hover:text-white p-1 rounded transition-colors"
               title="Edit"
@@ -139,7 +151,7 @@ export function SquadTeamDetail({ teamId, onDeleted }: Props) {
 
         {/* Tabs */}
         <div className="flex gap-1 mt-3 border-b border-navy-700 -mb-[1px]">
-          {([['roster', 'Roster'], ['formations', 'Formations'], ['periodization', 'Periodization Plan'], ['schedule', 'Training Schedule']] as [Tab, string][]).map(([tab, label]) => (
+          {([['roster', 'Roster'], ['depth-chart', 'Depth Chart'], ['formations', 'Formations'], ['periodization', 'Periodization Plan'], ['schedule', 'Training Schedule']] as [Tab, string][]).map(([tab, label]) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -158,7 +170,8 @@ export function SquadTeamDetail({ teamId, onDeleted }: Props) {
 
       {/* Tab content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'roster' && <RosterTab teamId={teamId} />}
+        {activeTab === 'roster' && <RosterTab teamId={teamId} teamName={team.name} />}
+        {activeTab === 'depth-chart' && <DepthChartTab teamId={teamId} />}
         {activeTab === 'formations' && <FormationsTab teamId={teamId} />}
         {activeTab === 'periodization' && <PeriodizationPlanTab teamId={teamId} />}
         {activeTab === 'schedule' && <TrainingScheduleTab teamId={teamId} />}

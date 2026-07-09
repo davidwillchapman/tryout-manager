@@ -10,6 +10,7 @@ export const squadKeys = {
   formation: (teamId: number, formationId: number) => ['squad', 'teams', teamId, 'formations', formationId] as const,
   templates: ['squad', 'templates'] as const,
   template: (id: number) => ['squad', 'templates', id] as const,
+  depthChart: (teamId: number, viewType: string) => ['squad', 'teams', teamId, 'depth-chart', viewType] as const,
 };
 
 // ─── Squad Teams ──────────────────────────────────────────────────────────────
@@ -74,6 +75,14 @@ export function useDeleteSquadTeam() {
   });
 }
 
+export function useCloneSquadTeam() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (teamId: number) => apiFetch<SquadTeam>(`/squad/teams/${teamId}/clone`, { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: squadKeys.teams }),
+  });
+}
+
 // ─── Squad Players ────────────────────────────────────────────────────────────
 export function useSquadPlayers(teamId: number) {
   return useQuery({
@@ -121,6 +130,27 @@ export function useDeleteSquadPlayer(teamId: number) {
       qc.invalidateQueries({ queryKey: squadKeys.players(teamId) });
       qc.invalidateQueries({ queryKey: squadKeys.teams });
     },
+  });
+}
+
+// ─── Depth Charts ─────────────────────────────────────────────────────────────
+export function useDepthChartEntries(teamId: number, viewType: 'positional' | 'categorical') {
+  return useQuery({
+    queryKey: squadKeys.depthChart(teamId, viewType),
+    queryFn: () => apiFetch<Record<string, number[]>>(`/squad/teams/${teamId}/depth-chart/${viewType}`),
+    enabled: !!teamId,
+  });
+}
+
+export function useSaveDepthChart(teamId: number, viewType: 'positional' | 'categorical') {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (assignments: Record<string, number[]>) =>
+      apiFetch<void>(`/squad/teams/${teamId}/depth-chart/${viewType}`, {
+        method: 'PUT',
+        body: JSON.stringify(assignments),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: squadKeys.depthChart(teamId, viewType) }),
   });
 }
 

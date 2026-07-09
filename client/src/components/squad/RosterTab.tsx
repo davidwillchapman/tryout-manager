@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Pencil, Check, X, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Pencil, Check, X, GripVertical, Download } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -25,6 +25,7 @@ import type { SquadPlayer } from '../../types';
 
 interface Props {
   teamId: number;
+  teamName?: string;
 }
 
 const STATUS_STYLES: Record<SquadPlayer['status'], string> = {
@@ -111,7 +112,6 @@ function EditRow({
 
 function SortableRow({
   player,
-  rank,
   teamId,
   editingId,
   confirmDeleteId,
@@ -122,7 +122,6 @@ function SortableRow({
   onCancelEdit,
 }: {
   player: SquadPlayer;
-  rank: number;
   teamId: number;
   editingId: number | null;
   confirmDeleteId: number | null;
@@ -135,7 +134,7 @@ function SortableRow({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: player.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
 
-  const COL_SPAN = 8;
+  const COL_SPAN = 7;
 
   if (editingId === player.id) {
     return (
@@ -164,7 +163,6 @@ function SortableRow({
           <GripVertical size={13} />
         </span>
       </td>
-      <td className="px-2 py-2 text-muted text-xs w-6 text-center">{rank}</td>
       <td className="px-3 py-2 text-muted text-xs w-14">{player.jersey_number ?? '—'}</td>
       <td className="px-3 py-2 font-medium text-white">{player.name}</td>
       <td className="px-3 py-2 text-muted text-xs">{player.primary_position ?? '—'}</td>
@@ -199,7 +197,28 @@ function SortableRow({
   );
 }
 
-export function RosterTab({ teamId }: Props) {
+function exportToCsv(players: SquadPlayer[], teamName: string) {
+  const rows = [
+    ['#', 'Name', 'Primary Position', 'Secondary Position', 'Status'],
+    ...players.map((p) => [
+      p.jersey_number ?? '',
+      p.name,
+      p.primary_position ?? '',
+      p.secondary_position ?? '',
+      p.status,
+    ]),
+  ];
+  const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${teamName.replace(/[^a-z0-9]/gi, '_')}_roster.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function RosterTab({ teamId, teamName = 'roster' }: Props) {
   const { data: serverPlayers = [] } = useSquadPlayers(teamId);
   const deleteMutation = useDeleteSquadPlayer(teamId);
   const updateDepth = useUpdateDepthOrder(teamId);
@@ -211,7 +230,11 @@ export function RosterTab({ teamId }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   useEffect(() => {
-    setLocalPlayers([...serverPlayers].sort((a, b) => a.depth_order - b.depth_order));
+    setLocalPlayers([...serverPlayers].sort((a, b) => {
+      const aFirst = a.name.trim().split(/\s+/)[0].toLowerCase();
+      const bFirst = b.name.trim().split(/\s+/)[0].toLowerCase();
+      return aFirst.localeCompare(bFirst);
+    }));
   }, [serverPlayers]);
 
   function handleDelete(id: number) {
@@ -233,9 +256,19 @@ export function RosterTab({ teamId }: Props) {
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex items-center justify-between px-4 py-2 border-b border-navy-700 shrink-0">
         <span className="text-xs text-muted">{localPlayers.length} players</span>
-        <Button size="sm" onClick={() => setAddOpen(true)}>
-          <Plus size={12} /> Add Player
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToCsv(localPlayers, teamName)}
+            disabled={localPlayers.length === 0}
+            className="text-muted hover:text-white disabled:opacity-40 p-1 rounded transition-colors"
+            title="Export roster to CSV"
+          >
+            <Download size={14} />
+          </button>
+          <Button size="sm" onClick={() => setAddOpen(true)}>
+            <Plus size={12} /> Add Player
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-y-auto flex-1">
@@ -250,7 +283,6 @@ export function RosterTab({ teamId }: Props) {
                 <thead>
                   <tr className="border-b border-navy-700">
                     <th className="w-6" />
-                    <th className="text-left px-2 py-2 text-xs text-muted font-medium w-6">D</th>
                     <th className="text-left px-3 py-2 text-xs text-muted font-medium w-14">#</th>
                     <th className="text-left px-3 py-2 text-xs text-muted font-medium">Name</th>
                     <th className="text-left px-3 py-2 text-xs text-muted font-medium">Primary</th>
@@ -260,11 +292,10 @@ export function RosterTab({ teamId }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {localPlayers.map((player, i) => (
+                  {localPlayers.map((player) => (
                     <SortableRow
                       key={player.id}
                       player={player}
-                      rank={i + 1}
                       teamId={teamId}
                       editingId={editingId}
                       confirmDeleteId={confirmDeleteId}
